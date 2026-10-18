@@ -3,7 +3,7 @@
 
 #include "fmv/types.h"
 
-#define FMV_OSD_SPRITES 15u
+#define FMV_OSD_SPRITES 40u
 
 typedef struct {
     u32 elapsed_fields;

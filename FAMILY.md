@@ -99,6 +99,17 @@ the requirement.
   position bar with elapsed and total time, and sound on and off where there
   is sound. The controls show on input and get out of the picture's way while
   it plays.
+- **One menu, as alike as the consoles allow, in function and in look.**
+  Owner's instruction, 2026-10-17: every player's menu is the Neo Geo's,
+  reproduced as closely as each console can draw it. The same controls do the
+  same things, and the panel has the same parts in the same order: an opaque
+  dark panel with a lighter top edge, a seek bar with end caps and a knob, and
+  under it the state icon, then the speed where the console can play faster,
+  then MUTE when sound is off, then the elapsed and total time. A console that
+  cannot draw a part at the Neo Geo's size draws it smaller in the same place,
+  never differently, and its state section names the limit, such as the
+  Master System's eight sprites a line, with its figure and source. A change
+  to one player's menu is made in every player in the same task.
 
 ## How a new member starts
 
@@ -332,6 +343,14 @@ Gaps against "What every player does" (as of 2026-10-17):
 
 Differences the hardware forces:
 
+- The menu is the Neo Geo's panel at 64 by 40 pixels rather than across the
+  screen. The Master System and the Game Gear have no text layer, so the panel
+  is sprites, and the VDP draws at most eight sprites on a line (MacDonald's
+  VDP document), which is 64 pixels. Its text uses 3 by 5 glyphs two to a
+  tile, and the clock shows one minute digit below ten minutes. There is no
+  speed, because fast forward is not possible here. Its four colours are the
+  last four of the sprite palette, kept out of the film, so a frame has 28
+  colours rather than 32.
 - Subtitles are burned into the picture, so they cannot be switched off. The
   Master System has no text layer to draw them on separately.
 - Fast forward and rewind are not possible: moving one frame already takes up

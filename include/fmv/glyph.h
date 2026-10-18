@@ -12,10 +12,12 @@
 #define FMV_GLYPH_F          15u
 #define FMV_GLYPH_PLAY       16u
 #define FMV_GLYPH_PAUSE      17u
-#define FMV_GLYPH_MUTE       18u
+#define FMV_GLYPH_M          18u
+#define FMV_GLYPH_U          19u
+#define FMV_GLYPH_T          20u
+#define FMV_GLYPH_E          21u
 #define FMV_GLYPH_TENS       10u
 
-void fmv_glyph_row(u8 *tile, u8 row, u8 ink, u8 shade);
 void fmv_glyph_text(u8 *tile, u8 left, u8 right);
 void fmv_glyph_upload(u8 number, const u8 *tile);
 

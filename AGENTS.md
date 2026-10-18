@@ -367,7 +367,7 @@ saying why.
 ### Recorded exceptions to rules 6 and 9
 
 - `movie_cursor`, `movie_bank`, `movie_kind`, `movie_last_bank`,
-  `movie_muted`, `movie_inks` and `movie_defers` in `src/mediaplayer.c` are globals shared with `src/replay.s`, because the
+  `movie_muted` and `movie_defers` in `src/mediaplayer.c` are globals shared with `src/replay.s`, because the
   replay is assembly and reads and writes them by symbol. Nothing else
   touches them.
 - The mapper register at `0xFFFF` is written through a cast `volatile`
@@ -651,12 +651,30 @@ screen. That change to `src/main.c` and `src/screen.c` has not run on a
 console yet. The next change to `src/replay.s`, the transfer loop or the
 overlay's VDP writes is unverified again until it runs on a console.
 
-Since that run the overlay moved up: text at sprite y 145, the bar at 157 and
-the diagnostics rows at 121 and 133, so every overlay sprite sits inside the
-Game Gear's visible window, lines 24 to 167 and columns 48 to 207. Before, the
-bar drew at y 179, below that window, so a Game Gear in Master System mode
-never showed it. Only sprite positions changed; a Game Gear run should confirm
-the clock and bar now show on the panel.
+Since that run the overlay became the family's menu, owner's instruction of
+2026-10-17: the Neo Geo player's panel, as alike in function and look as eight
+sprites a line allow. It is 64 by 40 pixels, five rows of eight sprites at
+sprite y 127 to 159 and x 96 to 159, inside the Game Gear's visible window,
+lines 24 to 167 and columns 48 to 207: a grey top edge, a seek bar with end
+caps, an orange fill and a white knob that moves a cell at a time as the Neo
+Geo's does, a panel row, a text row with the play or pause glyph, MUTE when
+sound is off and the elapsed and total time, then a panel row. The Neo Geo
+draws the same parts across its 40-column text layer; the Master System has
+no text layer and draws eight sprites a line, so the panel is 64 pixels wide,
+its text uses the 3 by 5 glyphs two to a tile, and the clock shows one
+minute digit below ten minutes. The diagnostics rows moved above it, to
+sprite y 103 and 115. None of this has run on a console.
+
+The menu's four colours, panel, white, orange and grey, are the last four
+entries of the sprite palette, 28 to 31, and the baker keeps them out of the
+film: every palette the film loads carries them, so the menu never recolours
+the film and the replay no longer writes ink bytes after the closing run. The
+film has 28 colours a frame instead of 32. The colours come from
+`fmvcore.font.MENU_COLOURS`, the Neo Geo's own, converted to each console's
+lattice by `smsggmedia.menu`, and `src/sms/fmv_target.h` and
+`src/gg/fmv_target.h` carry the same values, held equal by a test. The panel's
+art is `include/fmv/menuart.h`, generated from the core's glyph art by
+`tools/scripts/menu_art.py`; a test fails when the committed header differs.
 
 The Game Gear build, `--target gg` and `make rom TARGET=gg`, has run only in
 mednafen's Game Gear module. It compiles the same player with `TARGET_GG`,
@@ -683,15 +701,16 @@ The pause overlay lives in VRAM no picture reaches. The back name table spans
 0x3000 to 0x36FF for 28 rows, the display shows 24, and nothing writes the
 last four rows, so 0x3600 to 0x37FF holds 16 patterns, sprite tiles 176 to
 191 with the sprite patterns at 0x2000. The front table's last four rows,
-0x3E00 to 0x3EFF, give 8 more, sprite tiles 240 to 247; the diagnostics use
-240 to 242, the state glyph 243, and 244 is the blank tile a hidden overlay's
-sprites point at, so the diagnostics after them stay in the sprite list. The
-screen reset fills those rows with the idle name table cell, which draws as a
-one-pixel column, so the overlay clears 244 before it places its sprites. The overlay sets sprite palette
-entries 30 and 31 to black and white; the next frame's closing run writes
-every palette entry again, so resuming restores the film's colours on the
-first frame. A mednafen run of a probe ROM drew it in place, white on a black
-shadow.
+0x3E00 to 0x3EFF, give 8 more, sprite tiles 240 to 247, and the 64 bytes of
+the sprite attribute table the VDP never reads, 0x3F40 to 0x3F7F, give 2,
+sprite tiles 250 and 251; MacDonald's VDP document lays the table out as Y
+at 0x00 to 0x3F and X and pattern at 0x80 to 0xFF, and SMSlib writes only
+those. The menu's text takes 176 to 183 and its art 184 to 190; the
+diagnostics take 191, 240 to 243, 245 to 247, 250 and 251; and 244 is the
+blank tile a hidden overlay's sprites point at, so the diagnostics after them
+stay in the sprite list. The screen reset fills the name table rows with the
+idle cell, which draws as a one-pixel column, so the overlay clears 244 before
+it places its sprites.
 
 The owner has a Game Gear with an Everdrive, which runs Master System ROMs, and
 that is the hardware path available. What it can and cannot settle is in

@@ -16,7 +16,7 @@
 #define DIAG_SPRITE_END    0xD0u
 #define DIAG_SPRITE_PIXELS 8u
 #define DIAG_X             108u
-#define DIAG_TOP_Y         121u
+#define DIAG_TOP_Y         103u
 #define DIAG_ROW_PITCH     12u
 #define DIAG_MAX_FOUR      9999u
 #define DIAG_MAX_TWO       99u
@@ -34,7 +34,7 @@
 #define DIAG_TILE_LINES    50u
 #define DIAG_PLACE_LINES   30u
 
-static const u8 diag_tiles[DIAG_TILES] = {185u, 186u, 187u, 188u, 189u, 190u, 191u, 240u, 241u, 242u};
+static const u8 diag_tiles[DIAG_TILES] = {191u, 240u, 241u, 242u, 243u, 245u, 246u, 247u, 250u, 251u};
 
 static u8 diag_tile[FMV_GLYPH_TILE_BYTES];
 static u8 diag_cells[DIAG_ROWS * DIAG_ROW_CELLS];

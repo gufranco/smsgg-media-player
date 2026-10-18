@@ -117,7 +117,6 @@ def replay(
     data: bytes | None = None,
     banks: int = 1,
     muted: bool = False,
-    inks: bool = False,
 ) -> tuple[Ports, Memory, dict[str, int]]:
     rom, names = built
     chunk = film() if data is None else data
@@ -127,7 +126,6 @@ def replay(
     image[names["_movie_bank"]] = FIRST_BANK
     image[names["_movie_last_bank"]] = FIRST_BANK + banks - 1
     image[names["_movie_muted"]] = int(muted)
-    image[names["_movie_inks"]] = int(inks)
     image[RETURN] = HALT
     cursor = names["_movie_cursor"]
     image[cursor] = WINDOW & 0xFF
@@ -158,10 +156,6 @@ def cursor_of(memory: Memory, names: dict[str, int]) -> int:
     address = names["_movie_cursor"]
     return memory.read8(address) | (memory.read8(address + 1) << 8)
 
-
-OVERLAY_INKS = [0x00, 0x3F]
-
-INK_ADDRESS = [0x1E, 0xC0]
 
 PSG_ATTENUATE_ALL = [0x9F, 0xBF, 0xDF, 0xFF]
 

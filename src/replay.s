@@ -6,7 +6,6 @@
         .globl _movie_kind
         .globl _movie_last_bank
         .globl _movie_muted
-        .globl _movie_inks
         .globl _movie_defers
 
         CHUNK_BAD = 0x80
@@ -130,31 +129,7 @@ fmvcopy:
         outi
         .endm
 fmvdone:
-        ld  a, (_movie_inks)
-        or  a, a
-        jp  z, mvloop
-        push hl
-        di
-        ld  a, #INK_ENTRY
-        out (#0xBF), a
-        ld  a, #0xC0
-        nop
-        nop
-        nop
-        out (#0xBF), a
-        ei
-        ld  hl, #mvinks
-        ld  b, #INK_COUNT
-        ld  c, #0xBE
-mvinkpaced:
-        outi
-        nop
-        jp  nz, mvinkpaced
-        pop hl
         jp  mvloop
-
-mvinks:
-        INK_BYTES
 
 mvbank:
         ld  a, (_movie_last_bank)

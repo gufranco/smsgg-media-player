@@ -53,9 +53,9 @@ host; the player and every ROM build run in a pinned Docker image.
 
 ### The problem
 
-The Master System has no video hardware beyond its tile display. It draws
-8x8 patterns from 16 KB of VRAM, which holds 512 of them, and a film needs
-thousands. The Z80 runs at 3.58 MHz, and the VDP takes a byte no faster than
+The Master System and the Game Gear share one VDP, with no video hardware
+beyond its tile display. It draws 8x8 patterns from 16 KB of VRAM, which holds
+512 of them, and a film needs thousands. The Z80 runs at 3.58 MHz, and the VDP takes a byte no faster than
 one every 29 T-states while the picture is being drawn. There is no time to
 decode anything on the console, and barely time to move the data.
 
@@ -78,7 +78,7 @@ and the controls.
 | Z80 replay loop | Working. Pattern and name runs at 30 cycles a byte against Sega's documented floor of 29; the palette and name table flip at 16 inside a V counter guard in the vertical blank. Held by a build gate and by running the built replay on a Z80 |
 | Sound | Tone synthesis on the PSG, written once a field before the picture. `--silent` leaves it out. Played on a Master System and a Game Gear |
 | Subtitles | A SubRip `.srt` named with `--subtitles`, or one beside the source under the same name, is burned into the bottom of the picture in the family's 8x8 font, white on a black edge, at most two lines of 32 columns |
-| Controls | Plays on a loop. A position bar with a play, pause and mute glyph and the elapsed and total time shows for about three seconds at the start and after any press of Up, Down, Left, Right or button 1, then gets out of the picture's way; while paused it stays up. Button 1 restarts. Button 2 stops on a black screen, and button 1, button 2 or Pause then plays from the beginning. Pause, or Start on a Game Gear, pauses and resumes. Down shows and hides the diagnostics at any time, and button 1 does too while paused: frame over total frames, the cartridge bank, and how many fields were deferred because the vertical blank was missed. Up turns sound off and on; sound returns within a second. Left and Right jump to the seek points the baker places every 10 seconds, `--seek-every` to change; a jump shows about a quarter of a second of black while the point's picture loads. A corrupt stream stops on a red one |
+| Controls | Plays on a loop. A menu drawn like the Neo Geo player's, a dark panel with a seek bar and knob, the play or pause glyph, MUTE when sound is off and the elapsed and total time, shows for about three seconds at the start and after any press of Up, Down, Left, Right or button 1, then gets out of the picture's way; while paused it stays up. Button 1 restarts. Button 2 stops on a black screen, and button 1, button 2 or Pause then plays from the beginning. Pause, or Start on a Game Gear, pauses and resumes. Down shows and hides the diagnostics at any time, and button 1 does too while paused: frame over total frames, the cartridge bank, and how many fields were deferred because the vertical blank was missed. Up turns sound off and on; sound returns within a second. Left and Right jump to the seek points the baker places every 10 seconds, `--seek-every` to change; a jump shows about a quarter of a second of black while the point's picture loads. A corrupt stream stops on a red one |
 | Field rate | Paced for NTSC, 59.92 fields a second, which the Game Gear also runs at. The player draws one chunk a field, so a 50 Hz PAL console plays the same stream at about five sixths of its intended speed. Nothing here has been checked on a PAL console |
 | Game Gear | `--target gg` builds a native Game Gear cartridge: the 160x144 panel as 20 by 18 cells, palettes fitted from 4096 colours, the PSG's voices routed left and right on the headphones from a stereo source, and Start to pause. It plays in mednafen's Game Gear mode, and its capture matches the replay oracle pixel for pixel. It has not run on a Game Gear in its own mode yet |
 | Regression set | Six clips of different kinds baked on every test run, once for the Master System and once for the Game Gear |
@@ -128,14 +128,14 @@ The Neo Geo holds **1,048,576 tiles resident in character ROM**, so its player
 writes tile numbers into sprite control blocks and does nothing else at runtime.
 A tile number is the decoded form, so there is no decompression step.
 
-The Master System addresses **512 patterns in 16 KB of VRAM**, and 512 patterns
+The Master System and the Game Gear address **512 patterns in 16 KB of VRAM**, and 512 patterns
 at 32 bytes each is exactly all of VRAM before the name table is placed. The
 dictionary cannot be resident. It has to be paged in from ROM while the film
 plays.
 
 Three consequences follow, and they are the whole design.
 
-| | Neo Geo | Master System |
+| | Neo Geo | Master System and Game Gear |
 |---|---|---|
 | Binding constraint | Character ROM | Cartridge bytes |
 | Per-frame work | Write tile numbers | Upload patterns, then write name table entries |
@@ -218,7 +218,7 @@ Every figure here carries its source in [AGENTS.md](AGENTS.md).
 | VRAM | 16 KB, 512 patterns of 32 bytes | The dictionary cannot be resident. Patterns are paged in while the film plays, and the second name table leaves 383 slots for the film |
 | VDP data port, active display | 29 T-states between writes | Pattern and name runs go out at 30 T-states a byte |
 | VDP data port, blanking | 16 T-states between writes | Only the guarded closing run, palettes and the name table flip, uses it |
-| Colours | 64, in two palettes of 16 | A cell of 8x8 pixels draws from one palette, so a cell has 16 colours |
+| Colours | 64, in two palettes of 16 | A cell of 8x8 pixels draws from one palette, so a cell has 16 colours; the second palette keeps its last 4 for the menu, so the film has 28 |
 | Colours, Game Gear | 4096, in two palettes of 16, two bytes an entry | The closing run carries 64 palette bytes instead of 32, inside the same guarded vertical-blank copy |
 | Screen, Game Gear | 160x144, the centre of the 256x192 raster | The film is 20 by 18 cells, so a field moves fewer cells |
 | Stereo, Game Gear | Port `$06` routes each PSG channel left and right, on the headphones only | One pan byte a field at most, kind `0x08` |
@@ -659,7 +659,8 @@ empty.
 <summary><strong>Why are the tiles paged instead of stored in ROM?</strong></summary>
 <br>
 
-The Master System draws only from VRAM, and VRAM holds 512 patterns. A film
+The Master System and the Game Gear draw only from VRAM, and VRAM holds 512
+patterns. A film
 needs thousands, so they live in the cartridge and the player copies each
 frame's new ones into slots the screen is not showing.
 

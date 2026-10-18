@@ -6,12 +6,12 @@ from collections import Counter
 import pytest
 from z80vdp import SAT_Y, Session, expected_pixels, load, pixels, run, sprites
 
-TOP_ROW = [185, 186, 187, 188, 189]
-BOTTOM_ROW = [190, 191, 240, 241, 242]
-FIRST_SPRITE = 15
+TOP_ROW = [191, 240, 241, 242, 243]
+BOTTOM_ROW = [245, 246, 247, 250, 251]
+FIRST_SPRITE = 40
 ROW_X = [108, 116, 124, 132, 140]
-TOP_Y = 121
-BOTTOM_Y = 133
+TOP_Y = 103
+BOTTOM_Y = 115
 SPRITE_HEIGHT = 8
 SPRITES_PER_LINE = 8
 FRAME_INTERRUPT_LINE = 0xC1

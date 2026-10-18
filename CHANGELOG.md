@@ -11,6 +11,7 @@ README under "Quality". This file carries the ones that cost time.
 
 ## Contents
 
+- [One menu for the family](#one-menu-for-the-family)
 - [Flat blocks on the Game Gear](#flat-blocks-on-the-game-gear)
 - [The Game Gear joined every gate](#the-game-gear-joined-every-gate)
 - [Bars baked into a source are cropped](#bars-baked-into-a-source-are-cropped)
@@ -33,6 +34,30 @@ README under "Quality". This file carries the ones that cost time.
 - [Four parameters checked against the conditions that changed](#four-parameters-checked-against-the-conditions-that-changed)
 - [The film was promising a frame rate it could not hold](#the-film-was-promising-a-frame-rate-it-could-not-hold)
 - [An unrolled loop that every check approved](#an-unrolled-loop-that-every-check-approved)
+
+## One menu for the family
+
+The owner asked for the Master System and Game Gear menu to match the Neo Geo
+player's in function and look. The Neo Geo draws its menu on a 40-column text
+layer above the picture; this VDP has none and draws at most eight sprites on
+a line, so the panel is the Neo Geo's parts in the same order at 64 by 40
+pixels: the top edge, the seek bar with caps, fill and knob, then the play
+or pause glyph, MUTE and the clock, with the art generated from the core's
+glyphs.
+
+The Neo Geo panel has four colours, and the old overlay borrowed two sprite
+palette entries from the film while it showed, turning film pixels black or
+white. Asked to choose, the owner had the baker keep the last four sprite
+entries for the menu in every palette, so the film has 28 colours a frame and
+the menu never touches it. The replay's ink writes after the closing run went
+with it. On the six regression films the Master System's error moved by at
+most 3% and the Game Gear's rose 5 to 7%.
+
+Two budget details surfaced in the Z80 tests. Work started in the vertical
+blank read a whole display of room and drew past the next field, so each call
+now spends no more than the room it started with. And the panel needs 26
+sprite tiles where the hidden name table rows hold 24; the sprite table's 64
+unused bytes hold the other two. None of this has run on a console.
 
 ## Flat blocks on the Game Gear
 

@@ -56,11 +56,6 @@ static fmv_diagnostics diagnostics(void)
     return seen;
 }
 
-static void show_inks(void)
-{
-    fmv_movie_set_inks((u8)(transport.overlay_fields != 0u || diag_shown));
-}
-
 static void seek(s8 direction)
 {
     const fmv_seek_query query = {movie_keys, (u8)MOVIE_KEYS, view.where.elapsed_fields, direction};
@@ -123,7 +118,6 @@ static void wait_for_resume(void)
     fmv_pause_clear();
     view.paused = 0u;
     fmv_osd_state();
-    show_inks();
 }
 
 static void wait_for_wake(void)
@@ -164,7 +158,6 @@ static void apply_overlay(u16 actions)
     if ((actions & FMV_ACT_TICK) != 0u && diag_shown) {
         fmv_diag_open();
     }
-    show_inks();
 }
 
 static fmv_outcome handle_input(void)
@@ -218,7 +211,6 @@ static void begin(void)
     if (diag_shown) {
         fmv_diag_open();
     }
-    show_inks();
 }
 
 static fmv_outcome play_once(void)

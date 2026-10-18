@@ -9,6 +9,10 @@ typedef u8 fmv_colour;
 #define FMV_COLOUR_BLACK     0x00u
 #define FMV_COLOUR_WHITE     0x3Fu
 #define FMV_COLOUR_RED       0x03u
+#define FMV_MENU_PANEL  0x00u
+#define FMV_MENU_INK    0x3Fu
+#define FMV_MENU_ACCENT 0x0Bu
+#define FMV_MENU_DIM    0x15u
 #define FMV_COLOUR_ASSERT    0x30u
 #define FMV_KEYS_TEXT        "1 restarts 2 stops Pause pauses Up mutes Down diag Left/Right seek"
 

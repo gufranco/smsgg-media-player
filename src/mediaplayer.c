@@ -12,7 +12,6 @@ volatile u8 movie_bank;
 volatile u8 movie_kind;
 volatile u8 movie_last_bank;
 volatile u8 movie_muted;
-volatile u8 movie_inks;
 volatile u16 movie_defers;
 static volatile u16 movie_frames;
 
@@ -62,11 +61,6 @@ void fmv_movie_set_muted(u8 muted)
 u8 fmv_movie_muted(void)
 {
     return movie_muted;
-}
-
-void fmv_movie_set_inks(u8 inks)
-{
-    movie_inks = inks;
 }
 
 u8 fmv_movie_bank(void)

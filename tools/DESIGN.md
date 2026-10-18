@@ -407,6 +407,18 @@ cartoon and from 0.0695 to 0.0437 on the game footage between none and 1.0,
 and the owner picked 1.0 from the rendered sheets. Above 1.0 the threshold
 passes half a step and moves a value already on a level.
 
+### [`smsggmedia/menu.py`](smsggmedia/menu.py)
+
+The menu's colours on this console, and which palette entries hold them.
+
+The family's menu is one menu, owner's instruction of 2026-10-17, so its
+colours are the Neo Geo player's, `fmvcore.font.MENU_COLOURS`, converted to
+each lattice by rounding each 5-bit channel to the nearest level. Panel, ink,
+accent and dim take the last four entries of the sprite palette, 28 to 31;
+the edge colour of the Neo Geo panel's top line draws in dim, because a fifth
+entry would take another colour from the film. `INDEX_OF` maps the art's
+codes to those entries for the menu art generator.
+
 ### [`smsggmedia/output.py`](smsggmedia/output.py)
 
 What a bake leaves on disk, and how it avoids leaving the wrong thing.
@@ -425,7 +437,13 @@ Fit the two hardware palettes to one frame, and assign a palette per cell.
 
 CRAM holds two palettes of 16 entries drawn from a 64-colour space, so 32
 colours reach the screen at once and a cell picks one palette for all 64 of
-its pixels. Uploading the whole of CRAM costs 32 bytes, 64 on the Game Gear,
+its pixels. The second palette is also the sprites', and its last four
+entries are the menu's, written by `_fit_tables` from `menu.colours` into
+every fitted table: the film fits 28 colours, and a cell on the second
+palette may still use a menu colour when one is close, since those entries
+never change. Measured on the six regression films, keeping them moved the
+Master System's displayed error by at most 3% either way and raised the
+Game Gear's by 5 to 7%. Uploading the whole of CRAM costs 32 bytes, 64 on the Game Gear,
 which against a per-field budget in the hundreds is cheap enough to refit
 every frame, but a
 refit re-colours every tile already on the console, so `fit_or_keep` keeps the
@@ -1279,6 +1297,16 @@ The oracle stands in for a capture because the player draws its position
 bar over the first three seconds of every play. A headless mednafen capture
 of each demo cartridge matched its stream pixel for pixel on every field
 after the bar hid, 157 on the Master System and 156 on the Game Gear.
+
+### [`scripts/menu_art.py`](scripts/menu_art.py)
+
+Write `include/fmv/menuart.h`, the menu's seven fixed tiles, from the core's
+glyph art: the top edge, the panel, both bar caps, the filled and empty bar
+and the knob, each a 4-bitplane sprite tile in the menu's palette entries.
+The player compiles the header in; the script runs on the host, because the
+toolchain image has no Python packages. `tests/test_menu_art.py` fails when
+the committed header differs from what the art generates, so a change to the
+shared art reaches this player through one command.
 
 ### [`scripts/fetch_clips.py`](scripts/fetch_clips.py)
 

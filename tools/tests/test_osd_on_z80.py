@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
 import struct
+import sys
+from pathlib import Path
 
 import pytest
 from z80vdp import (
@@ -16,48 +19,52 @@ from z80vdp import (
     run,
     sprites,
     tile,
-    white_rows,
 )
 
-from smsggmedia import console
+from smsggmedia import console, lattice, menu
 
-FIRST_TILE = 176
-TEXT_TILES = 6
-TEXT_NUMBERS = list(range(FIRST_TILE, FIRST_TILE + TEXT_TILES))
-BAR_SPRITES = 8
-OSD_SPRITES = 15
-STATE_SPRITE = TEXT_TILES + BAR_SPRITES
-STATE_TILE = 243
+COLUMNS = 8
+ROWS = 5
+OSD_SPRITES = COLUMNS * ROWS
+TEXT_FIRST = 176
+TEXT_NUMBERS = list(range(TEXT_FIRST, TEXT_FIRST + COLUMNS))
+ART_FIRST = TEXT_FIRST + COLUMNS
+TOP, PANEL, CAP_LEFT, CAP_RIGHT, FILLED, EMPTY, KNOB = range(ART_FIRST, ART_FIRST + 7)
 BLANK_TILE = 244
-TEXT_Y = 145
-BAR_Y = 157
+PANEL_X = 96
+PANEL_Y = 127
+BAR_ROW = slice(COLUMNS, 2 * COLUMNS)
 GG_FIRST_LINE = 24
 GG_LAST_LINE = 167
 GG_FIRST_COLUMN = 48
 GG_LAST_COLUMN = 207
-TEXT_X = 112
-BAR_X = 96
-STATE_X = 96
-FULL = FIRST_TILE + TEXT_TILES
-EMPTY = FULL + 1
-PARTIAL = FULL + 2
-INK_BLACK = 0x00
-INK_WHITE = 0x3F
-INK_ENTRIES = slice(30, 32)
+MENU_ENTRIES = slice(28, 32)
 FIELDS_PER_SECOND = console.NTSC_FIELD_HZ
 FRAME_INTERRUPT_LINE = 0xC1
 FIELD_LINES = 262
-FIELD_LIMIT = 12
+FIELD_LIMIT = 24
 LATE_LINE = 190
 BLANK_LINE = 200
 PAUSED_AT = WHERE + 8
 IDLE_CELLS = bytes([0x00, 0x08])
-OVERLAY_TILES = range(FIRST_TILE, BLANK_TILE + 1)
+MENU_ART = Path(__file__).resolve().parents[1] / "scripts" / "menu_art.py"
 
 
 @pytest.fixture(scope="module")
 def built():
     return load()
+
+
+@pytest.fixture(scope="module")
+def art():
+    spec = importlib.util.spec_from_file_location("menu_art", MENU_ART)
+    if spec is None or spec.loader is None:
+        msg = f"cannot import {MENU_ART}"
+        raise AssertionError(msg)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["menu_art"] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def view(*, elapsed: int, total: int, paused: int = 0, muted: int = 0) -> bytes:
@@ -85,24 +92,24 @@ def request_and_draw(session: Session, request: str) -> None:
     work_over_fields(session)
 
 
-def bar_tiles(session: Session) -> list[int]:
-    return [number for _, _, number in sprites(session.vdp)[TEXT_TILES:STATE_SPRITE]]
+def bar_tiles(vdp) -> list[int]:
+    return [number for _, _, number in sprites(vdp)[BAR_ROW]]
 
 
-def overlay_state(session: Session) -> tuple[bytes, bytes, bytes, bytes]:
+def overlay_state(session: Session) -> tuple[bytes, ...]:
     vram = session.vdp.vram
-    first = SPRITE_PATTERNS + OVERLAY_TILES.start * TILE_BYTES
-    last = SPRITE_PATTERNS + OVERLAY_TILES.stop * TILE_BYTES
+    first = SPRITE_PATTERNS + TEXT_FIRST * TILE_BYTES
+    last = SPRITE_PATTERNS + (BLANK_TILE + 1) * TILE_BYTES
     return (
         bytes(vram[first:last]),
         bytes(vram[SAT_Y : SAT_Y + OSD_SPRITES]),
         bytes(vram[SAT_XN : SAT_XN + 2 * OSD_SPRITES]),
-        bytes(session.vdp.cram[INK_ENTRIES]),
+        bytes(session.vdp.cram[MENU_ENTRIES]),
     )
 
 
-class TestShow:
-    def test_the_ink_entries_are_black_and_white(self, built):
+class TestThePanel:
+    def test_the_menu_colours_land_on_the_last_four_sprite_entries(self, built):
         # Arrange
         payload = view(elapsed=fields(1), total=fields(3))
 
@@ -110,9 +117,9 @@ class TestShow:
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert (vdp.cram[30], vdp.cram[31]) == (INK_BLACK, INK_WHITE)
+        assert list(vdp.cram[MENU_ENTRIES]) == menu.colours(lattice.MASTER_SYSTEM).tolist()
 
-    def test_the_text_reads_elapsed_over_total(self, built):
+    def test_it_is_five_rows_of_eight_sprites(self, built):
         # Arrange
         payload = view(elapsed=fields(1), total=fields(3))
 
@@ -120,19 +127,24 @@ class TestShow:
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels("00:01/00:03 ")
-
-    def test_the_text_sprites_sit_in_a_row_above_the_bar(self, built):
-        # Arrange
-        payload = view(elapsed=fields(1), total=fields(3))
-
-        # Act
-        vdp = run(built, "_fmv_osd_show", payload)
-
-        # Assert
-        assert sprites(vdp)[:TEXT_TILES] == [
-            (TEXT_Y, TEXT_X + 8 * index, FIRST_TILE + index) for index in range(TEXT_TILES)
+        assert [(y, x) for y, x, _ in sprites(vdp)[:OSD_SPRITES]] == [
+            (PANEL_Y + 8 * row, PANEL_X + 8 * column)
+            for row in range(ROWS)
+            for column in range(COLUMNS)
         ]
+
+    def test_the_rows_are_edge_bar_panel_text_panel(self, built):
+        # Arrange
+        payload = view(elapsed=0, total=fields(3))
+
+        # Act
+        vdp = run(built, "_fmv_osd_show", payload)
+
+        # Assert
+        numbers = [number for _, _, number in sprites(vdp)[:OSD_SPRITES]]
+        assert numbers[:COLUMNS] + numbers[2 * COLUMNS :] == (
+            [TOP] * COLUMNS + [PANEL] * COLUMNS + TEXT_NUMBERS + [PANEL] * COLUMNS
+        )
 
     def test_every_sprite_stays_inside_the_game_gear_window(self, built):
         # Arrange
@@ -142,148 +154,154 @@ class TestShow:
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert all(
-            y + 1 >= GG_FIRST_LINE
-            and y + 8 <= GG_LAST_LINE
-            and x >= GG_FIRST_COLUMN
-            and x + 7 <= GG_LAST_COLUMN
-            for y, x, _ in sprites(vdp)[:OSD_SPRITES]
-        )
+        placed = sprites(vdp)[:OSD_SPRITES]
+        assert min(y + 1 for y, _, _ in placed) >= GG_FIRST_LINE
+        assert max(y + 8 for y, _, _ in placed) <= GG_LAST_LINE + 1
+        assert min(x for _, x, _ in placed) >= GG_FIRST_COLUMN
+        assert max(x + 7 for _, x, _ in placed) <= GG_LAST_COLUMN
 
-    def test_half_way_lights_half_the_bar(self, built):
+    def test_the_art_is_the_shared_menu_art(self, built, art):
         # Arrange
-        payload = view(elapsed=90, total=180)
+        payload = view(elapsed=0, total=fields(3))
 
         # Act
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert sprites(vdp)[TEXT_TILES:STATE_SPRITE] == [
-            (BAR_Y, BAR_X + 8 * index, FULL if index < 4 else EMPTY) for index in range(BAR_SPRITES)
-        ]
+        uploaded = b"".join(tile(vdp, number) for number in range(TOP, KNOB + 1))
+        assert uploaded == b"".join(art.tile_bytes(name) for _, name in art.TILES)
 
-    def test_a_fill_between_sprites_uses_the_partial_tile(self, built):
+
+class TestTheBar:
+    @pytest.mark.parametrize(
+        ("elapsed", "expected"),
+        [
+            (0, [KNOB, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, CAP_RIGHT]),
+            (90, [FILLED, FILLED, FILLED, KNOB, EMPTY, EMPTY, EMPTY, CAP_RIGHT]),
+            (179, [FILLED] * 7 + [KNOB]),
+        ],
+        ids=["start", "half", "end"],
+    )
+    def test_the_knob_moves_along_the_bar_as_the_neo_geo_does(self, built, elapsed, expected):
         # Arrange
-        payload = view(elapsed=13, total=64)
+        payload = view(elapsed=elapsed, total=180)
 
         # Act
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert [number for _, _, number in sprites(vdp)[TEXT_TILES:STATE_SPRITE]][:3] == [
-            FULL,
-            PARTIAL,
-            EMPTY,
-        ]
+        assert bar_tiles(vdp) == expected
 
-    def test_the_partial_tile_lights_the_leftover_columns(self, built):
+    def test_a_knob_past_the_first_cell_fills_the_cap_behind_it(self, built):
         # Arrange
-        payload = view(elapsed=13, total=64)
+        payload = view(elapsed=40, total=180)
 
         # Act
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert white_rows(tile(vdp, PARTIAL))[2:6] == ["#####..."] * 4
+        assert bar_tiles(vdp)[:2] == [FILLED, KNOB]
 
-    def test_the_end_of_the_film_fills_the_bar(self, built):
+
+class TestTheTextRow:
+    def test_it_reads_icon_then_the_clock_on_the_right(self, built):
         # Arrange
-        payload = view(elapsed=500, total=500)
+        payload = view(elapsed=fields(65), total=fields(190))
 
         # Act
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert [number for _, _, number in sprites(vdp)[TEXT_TILES:STATE_SPRITE]] == [
-            FULL
-        ] * BAR_SPRITES
+        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels(">      1:05/3:10")
 
-    def test_the_total_rounds_to_the_nearest_second(self, built):
+    def test_sound_off_writes_mute_after_the_icon(self, built):
         # Arrange
-        payload = view(elapsed=0, total=106)
+        payload = view(elapsed=fields(65), total=fields(190), muted=1)
 
         # Act
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels("00:00/00:02 ")
-
-    def test_the_elapsed_time_counts_whole_seconds(self, built):
-        # Arrange
-        payload = view(elapsed=106, total=180)
-
-        # Act
-        vdp = run(built, "_fmv_osd_show", payload)
-
-        # Assert
-        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels("00:01/00:03 ")
-
-    def test_a_clock_past_99_minutes_holds_at_99_59(self, built):
-        # Arrange
-        payload = view(elapsed=fields(6000), total=fields(7200))
-
-        # Act
-        vdp = run(built, "_fmv_osd_show", payload)
-
-        # Assert
-        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels("99:59/99:59 ")
-
-
-class TestTheStateGlyph:
-    def test_it_sits_left_of_the_clock_on_the_text_row(self, built):
-        # Arrange
-        payload = view(elapsed=0, total=180)
-
-        # Act
-        vdp = run(built, "_fmv_osd_show", payload)
-
-        # Assert
-        assert sprites(vdp)[STATE_SPRITE] == (TEXT_Y, STATE_X, STATE_TILE)
-
-    def test_playing_shows_the_play_glyph(self, built):
-        # Arrange
-        payload = view(elapsed=0, total=180)
-
-        # Act
-        vdp = run(built, "_fmv_osd_show", payload)
-
-        # Assert
-        assert pixels(vdp, [STATE_TILE]) == expected_pixels("> ")
+        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels("> MUTE 1:05/3:10")
 
     def test_paused_shows_the_pause_glyph(self, built):
         # Arrange
-        payload = view(elapsed=0, total=180, paused=1)
+        payload = view(elapsed=fields(65), total=fields(190), paused=1)
 
         # Act
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert pixels(vdp, [STATE_TILE]) == expected_pixels("= ")
+        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels("=      1:05/3:10")
 
-    def test_sound_off_adds_the_mute_mark(self, built):
+    def test_a_film_of_ten_minutes_or_more_shows_two_minute_digits(self, built):
         # Arrange
-        payload = view(elapsed=0, total=180, muted=1)
+        payload = view(elapsed=fields(65), total=fields(725), muted=1)
 
         # Act
         vdp = run(built, "_fmv_osd_show", payload)
 
         # Assert
-        assert pixels(vdp, [STATE_TILE]) == expected_pixels(">x")
+        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels(">MUTE01:05/12:05")
 
-    def test_a_state_change_redraws_the_glyph(self, built):
+    def test_the_total_rounds_to_the_nearest_second(self, built):
         # Arrange
-        session = shown(built, view(elapsed=0, total=180))
+        payload = view(elapsed=0, total=fields(3) - 20)
+
+        # Act
+        vdp = run(built, "_fmv_osd_show", payload)
+
+        # Assert
+        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels(">      0:00/0:03")
+
+    def test_a_clock_past_99_minutes_holds_at_99_59(self, built):
+        # Arrange
+        payload = view(elapsed=fields(7000), total=fields(7200))
+
+        # Act
+        vdp = run(built, "_fmv_osd_show", payload)
+
+        # Assert
+        assert pixels(vdp, TEXT_NUMBERS) == expected_pixels(">    99:59/99:59")
+
+
+class TestStateAndTick:
+    def test_a_state_change_redraws_the_text(self, built):
+        # Arrange
+        session = shown(built, view(elapsed=0, total=fields(3)))
         session.poke(PAUSED_AT, bytes([1]))
 
         # Act
         request_and_draw(session, "_fmv_osd_state")
 
         # Assert
-        assert pixels(session.vdp, [STATE_TILE]) == expected_pixels("= ")
+        assert pixels(session.vdp, TEXT_NUMBERS) == expected_pixels("=      0:00/0:03")
+
+    def test_a_tick_redraws_the_elapsed_time(self, built):
+        # Arrange
+        session = shown(built, view(elapsed=fields(1), total=fields(10)))
+        session.poke(WHERE, fields(5).to_bytes(4, "little"))
+
+        # Act
+        request_and_draw(session, "_fmv_osd_tick")
+
+        # Assert
+        assert pixels(session.vdp, TEXT_NUMBERS) == expected_pixels(">      0:05/0:10")
+
+    def test_a_tick_moves_the_knob(self, built):
+        # Arrange
+        session = shown(built, view(elapsed=0, total=180))
+        session.poke(WHERE, (90).to_bytes(4, "little"))
+
+        # Act
+        request_and_draw(session, "_fmv_osd_tick")
+
+        # Assert
+        assert bar_tiles(session.vdp)[3] == KNOB
 
 
 class TestClose:
-    def test_closing_points_every_overlay_sprite_at_the_blank_tile(self, built):
+    def test_closing_points_every_panel_sprite_at_the_blank_tile(self, built):
         # Arrange
         session = shown(built, view(elapsed=0, total=180))
 
@@ -291,9 +309,9 @@ class TestClose:
         request_and_draw(session, "_fmv_osd_close")
 
         # Assert
-        assert [number for _, _, number in sprites(session.vdp)[:OSD_SPRITES]] == [
-            BLANK_TILE
-        ] * OSD_SPRITES
+        assert [number for _, _, number in sprites(session.vdp)[:OSD_SPRITES]] == (
+            [BLANK_TILE] * OSD_SPRITES
+        )
 
     def test_the_blank_tile_is_cleared_over_the_idle_name_table_cells(self, built):
         # Arrange
@@ -311,8 +329,7 @@ class TestClose:
     def test_a_tick_while_closed_draws_nothing(self, built):
         # Arrange
         session = shown(built, view(elapsed=0, total=180))
-        session.call("_fmv_osd_close")
-        work_over_fields(session)
+        request_and_draw(session, "_fmv_osd_close")
         before = session.vdp.writes
 
         # Act
@@ -322,32 +339,8 @@ class TestClose:
         assert session.vdp.writes == before
 
 
-class TestTheTick:
-    def test_a_tick_redraws_the_elapsed_time(self, built):
-        # Arrange
-        session = shown(built, view(elapsed=fields(1), total=fields(10)))
-        session.poke(WHERE, fields(5).to_bytes(4, "little"))
-
-        # Act
-        request_and_draw(session, "_fmv_osd_tick")
-
-        # Assert
-        assert pixels(session.vdp, TEXT_NUMBERS) == expected_pixels("00:05/00:10 ")
-
-    def test_a_tick_moves_the_bar(self, built):
-        # Arrange
-        session = shown(built, view(elapsed=0, total=180))
-        session.poke(WHERE, (90).to_bytes(4, "little"))
-
-        # Act
-        request_and_draw(session, "_fmv_osd_tick")
-
-        # Assert
-        assert bar_tiles(session) == [FULL] * 4 + [EMPTY] * 4
-
-
 class TestTheFieldBudget:
-    @pytest.mark.parametrize("line", [0, 40, 100, 150, 180, 191])
+    @pytest.mark.parametrize("line", [*range(0, 192, 13), 191])
     def test_work_started_in_the_display_returns_before_the_frame_interrupt(self, built, line):
         # Arrange
         session = Session(built, view(elapsed=fields(3599), total=fields(7199), muted=1))

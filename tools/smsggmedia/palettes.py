@@ -7,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from fmvcore import dither
 
-from smsggmedia import lattice, pattern, smscolor
+from smsggmedia import lattice, menu, pattern, smscolor
 
 LLOYD_ROUNDS: Final = 8
 ASSIGN_ROUNDS: Final = 6
@@ -127,7 +127,7 @@ def fit_or_keep(
         columns=frame.shape[1] // pattern.TILE_PX,
         strength=ordered_dither,
     )
-    fresh, fresh_error = mapping.quantise(_fit(cells, lab))
+    fresh, fresh_error = mapping.quantise(_fit(cells, lab, space))
     if previous is None:
         return fresh
     table = previous.reshape(smscolor.PALETTE_COUNT, smscolor.PALETTE_ENTRIES)
@@ -145,18 +145,18 @@ def _cells_of(
 
 
 def _fit(
-    cells: npt.NDArray[np.unsignedinteger], lab: npt.NDArray[np.float32]
+    cells: npt.NDArray[np.unsignedinteger], lab: npt.NDArray[np.float32], space: lattice.Lattice
 ) -> npt.NDArray[np.uint16]:
     cell_lab = lab[cells].reshape(cells.shape[0], -1, 3).mean(axis=1)
     group = _split(cell_lab)
-    table = _fit_tables(cells, group, lab)
+    table = _fit_tables(cells, group, lab, space)
     flat = cells.reshape(cells.shape[0], -1)
     for _ in range(ASSIGN_ROUNDS):
         moved = _assign(flat, table, lab)
         if np.array_equal(moved, group):
             break
         group = moved
-        table = _fit_tables(cells, group, lab)
+        table = _fit_tables(cells, group, lab, space)
     return table
 
 
@@ -245,6 +245,7 @@ def _fit_tables(
     cells: npt.NDArray[np.unsignedinteger],
     group: npt.NDArray[np.intp],
     lab: npt.NDArray[np.float32],
+    space: lattice.Lattice,
 ) -> npt.NDArray[np.uint16]:
     table = np.zeros((smscolor.PALETTE_COUNT, smscolor.PALETTE_ENTRIES), dtype=np.uint16)
     for index in range(smscolor.PALETTE_COUNT):
@@ -252,7 +253,9 @@ def _fit_tables(
         if members.size == 0:
             members = cells
         present, counts = np.unique(members.reshape(-1), return_counts=True)
-        table[index] = choose_entries(present, counts, lab, smscolor.PALETTE_ENTRIES)
+        slots = menu.FILM_ENTRIES if index == menu.MENU_PALETTE else smscolor.PALETTE_ENTRIES
+        table[index][:slots] = choose_entries(present, counts, lab, slots)
+    table[menu.MENU_PALETTE][menu.FILM_ENTRIES :] = menu.colours(space)
     table[1][BACKDROP_ENTRY] = BACKDROP_COLOUR
     return table
 

@@ -5,19 +5,13 @@ from itertools import pairwise
 
 import pytest
 from replayz80 import (
-    ACTIVE,
-    ACTIVE_FLOOR,
     ASSERT_COLOUR,
     ASSERT_LINE,
     BACKDROP_ENTRY,
     BAD,
     BANK_END,
-    CONTROL_PORT,
-    DATA_PORT,
     FIRST_BANK,
-    INK_ADDRESS,
     INSIDE,
-    OVERLAY_INKS,
     PALETTE,
     PAYLOAD,
     PSG_ATTENUATE_ALL,
@@ -49,66 +43,23 @@ def bcd(value: int) -> int:
     return (value // 10) * 16 + value % 10
 
 
-class TestTheOverlayInks:
-    def test_with_the_overlay_up_black_and_white_follow_the_palette(self, built):
+class TestTheClosingRun:
+    def test_nothing_follows_the_palette(self, built):
         # Arrange
         lines = [INSIDE]
 
         # Act
-        ports, _, _ = replay(built, lines, inks=True)
-
-        # Assert
-        assert ports.data() == list(PAYLOAD) + list(PALETTE) + OVERLAY_INKS
-
-    def test_they_land_on_the_last_two_sprite_palette_entries(self, built):
-        # Arrange
-        lines = [INSIDE]
-
-        # Act
-        ports, _, _ = replay(built, lines, inks=True)
-
-        # Assert
-        control = [value for _, port, value in ports.writes if port == CONTROL_PORT]
-        assert control[-2:] == INK_ADDRESS
-
-    def test_without_the_overlay_nothing_follows_the_palette(self, built):
-        # Arrange
-        lines = [INSIDE]
-
-        # Act
-        ports, _, _ = replay(built, lines, inks=False)
+        ports, _, _ = replay(built, lines)
 
         # Assert
         assert ports.data() == list(PAYLOAD) + list(PALETTE)
 
-    def test_a_deferred_field_writes_no_inks(self, built):
-        # Arrange
-        lines = [ACTIVE]
-
-        # Act
-        ports, _, _ = replay(built, lines, inks=True)
-
-        # Assert
-        assert ports.data() == list(PAYLOAD)
-
-    def test_every_write_after_the_palette_keeps_the_active_display_floor(self, built):
+    def test_the_frame_completes_after_it(self, built):
         # Arrange
         lines = [INSIDE]
 
         # Act
-        ports, _, _ = replay(built, lines, inks=True)
-
-        # Assert
-        stamps = [cycle for cycle, port, _ in ports.writes if port in (DATA_PORT, CONTROL_PORT)]
-        after = stamps[len(stamps) - len(OVERLAY_INKS) - len(INK_ADDRESS) - 1 :]
-        assert min(later - earlier for earlier, later in pairwise(after)) >= ACTIVE_FLOOR
-
-    def test_the_frame_still_completes(self, built):
-        # Arrange
-        lines = [INSIDE]
-
-        # Act
-        _, memory, names = replay(built, lines, inks=True)
+        _, memory, names = replay(built, lines)
 
         # Assert
         assert memory.read8(names["_movie_kind"]) == stream.END_FRAME

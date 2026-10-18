@@ -25,8 +25,8 @@ HEADER_REGION = 0x7FFF
 GG_INTERNATIONAL = 0x7
 WIDE_PALETTE = bytes(range(64))
 FLIP = 0x82
-INK_ADDRESS = 0x3C
-INK_WORDS = bytes([0x00, 0x00, 0xFF, 0x0F])
+MENU_ADDRESS = 0x38
+MENU_WORDS = bytes([0x00, 0x01, 0xFF, 0x0F, 0x9F, 0x01, 0x66, 0x07])
 
 
 @pytest.fixture(scope="module")
@@ -77,7 +77,7 @@ class TestTheGameGearCartridge:
         # Assert
         assert memory.read8(names["_movie_kind"]) == BAD
 
-    def test_the_overlay_inks_land_as_two_twelve_bit_entries(self, built):
+    def test_the_menu_colours_land_as_four_twelve_bit_entries(self, built):
         # Arrange
         routine = "_fmv_osd_inks"
 
@@ -85,7 +85,7 @@ class TestTheGameGearCartridge:
         vdp, _, _ = call(built, routine, gg=True)
 
         # Assert
-        assert bytes(vdp.cram[INK_ADDRESS : INK_ADDRESS + 4]) == INK_WORDS
+        assert bytes(vdp.cram[MENU_ADDRESS : MENU_ADDRESS + 8]) == MENU_WORDS
 
 
 class TestThePanRun:
