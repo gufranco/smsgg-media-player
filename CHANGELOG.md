@@ -11,6 +11,7 @@ README under "Quality". This file carries the ones that cost time.
 
 ## Contents
 
+- [Dither and judge by light](#dither-and-judge-by-light)
 - [One menu for the family](#one-menu-for-the-family)
 - [Flat blocks on the Game Gear](#flat-blocks-on-the-game-gear)
 - [The Game Gear joined every gate](#the-game-gear-joined-every-gate)
@@ -34,6 +35,41 @@ README under "Quality". This file carries the ones that cost time.
 - [Four parameters checked against the conditions that changed](#four-parameters-checked-against-the-conditions-that-changed)
 - [The film was promising a frame rate it could not hold](#the-film-was-promising-a-frame-rate-it-could-not-hold)
 - [An unrolled loop that every check approved](#an-unrolled-loop-that-every-check-approved)
+
+## Dither and judge by light
+
+Two ideas from a Game Boy Color video player were tried and measured, and
+neither shipped on its own: copying tiles at the 16 T-state blanking floor
+through the rest of the vertical blank, and accepting a resident tile when its
+error is within a factor of the best fresh tile's. The fast copy built and passed both
+timing gates, then changed nothing: every regression clip already fits its
+five-field slot at 12 fps, so error and lag were identical on all twelve clip
+and console pairs. It was reverted before any console saw it.
+
+The reuse rule is what found the real defect. It cut blurred error by up to
+36%, and the sheet showed grey blocks of a stale scene through the Game Gear's
+fade to black where the current rule faded cleanly. The metric was wrong:
+`blurred_error` low-passed Oklab values, so a dither of black and a dark level
+read darker than it looks, and a flat grey of the wrong brightness beat a
+correct dither in every dark scene. Blurring linear light, as the eye mixes
+pixels, reversed the verdict and agreed with every sheet. The core carries the
+fix.
+
+The quantiser had the same mistake. It placed a value between two levels by
+code value, so a grey of 42 lit half its pixels at 85 where its light called
+for a quarter. On the Master System's four levels a channel that washed out
+every dark and middle tone. Placed by light, block-mean light error fell 22%
+to 72% on the six regression clips and linear-blurred error 12% to 42%, and
+the sheets agree: Popeye's suits are dark again and Hong Kong's street keeps
+its night. The Game Gear keeps the code value, because its sixteen levels sit
+close, the numbers moved within noise and one sheet lost a green shirt to
+grey. The core's two-entry palette mix stays on Oklab distance: weighing it by
+light measured 0.3% to 1.6% worse on the Game Gear.
+
+The dial searches score with the corrected blur, so the slow test measured the
+recorded dials again. Sintel's denoise 8 and reuse 0.002 baked 5.2% worse than
+the search's denoise 4 and reuse 0.004, the old blur having rewarded the
+smoother picture; the manifest carries the new pair.
 
 ## One menu for the family
 

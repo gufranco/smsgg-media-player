@@ -107,7 +107,7 @@ class TestOrderedDither:
         # Assert
         assert np.unique(result).tolist() == [1, 2]
 
-    def test_the_mix_tracks_the_value(self):
+    def test_the_mix_gives_off_the_light_of_the_value(self):
         # Arrange
         rgb = np.full((8, 8, 3), 100, dtype=np.uint8)
 
@@ -115,7 +115,28 @@ class TestOrderedDither:
         result = SMS.quantise(rgb, dither=1.0)
 
         # Assert
-        assert float(result.mean()) == pytest.approx(100 * 3 / 255, abs=0.07)
+        shown = colour.srgb_to_linear(result.astype(np.float64) / 3).mean()
+        assert float(shown) == pytest.approx(float(colour.srgb_to_linear(100 / 255)), abs=0.004)
+
+    def test_the_game_gear_keeps_mixing_by_code_value(self):
+        # Arrange
+        rgb = np.full((8, 8, 3), 25, dtype=np.uint8)
+
+        # Act
+        result = GG.quantise(rgb, dither=1.0)
+
+        # Assert
+        assert int((result[..., 0] == 2).sum()) == 32
+
+    def test_a_dark_grey_lights_a_quarter_of_its_pixels_not_half(self):
+        # Arrange
+        rgb = np.full((8, 8, 3), 42, dtype=np.uint8)
+
+        # Act
+        result = SMS.quantise(rgb, dither=1.0)
+
+        # Assert
+        assert int((result[..., 0] == 1).sum()) == 16
 
     def test_the_pattern_repeats_inside_every_tile(self):
         # Arrange

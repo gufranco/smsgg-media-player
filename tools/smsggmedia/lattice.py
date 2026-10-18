@@ -18,6 +18,7 @@ LITTLE_WORDS: Final = "<u2"
 WIDE_REUSE_CONTRAST: Final = 0.5
 MASTER_SYSTEM_TOP: Final = target.MASTER_SYSTEM.channel_levels - 1
 DITHER_SIDE: Final = 4
+HALF_STEP: Final = 0.5
 FLOOR_CHUNK: Final = 1024
 _BAYER_ORDER: Final = np.array(
     [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]], dtype=np.float32
@@ -28,6 +29,7 @@ _BAYER: Final = (_BAYER_ORDER + 0.5) / _BAYER_ORDER.size - 0.5
 @dataclass(frozen=True, slots=True)
 class Lattice:
     levels: int
+    dither_by_light: bool = False
 
     def __post_init__(self) -> None:
         if self.levels < MIN_LEVELS or BYTE_MAX % (self.levels - 1):
@@ -53,7 +55,7 @@ class Lattice:
     def quantise(
         self, rgb: npt.NDArray[np.uint8], *, dither: float = NO_DITHER
     ) -> npt.NDArray[np.uint8]:
-        return quantise_levels(rgb, dither=dither, top=self.top)
+        return quantise_levels(rgb, dither=dither, top=self.top, by_light=self.dither_by_light)
 
     def pack(self, levels: npt.NDArray[np.integer]) -> npt.NDArray[np.unsignedinteger]:
         if levels.shape[-1] != smscolor.RGB_CHANNELS:
@@ -126,7 +128,7 @@ class Lattice:
 
 
 def quantise_levels(
-    rgb: npt.NDArray[np.uint8], *, dither: float = NO_DITHER, top: int
+    rgb: npt.NDArray[np.uint8], *, dither: float = NO_DITHER, top: int, by_light: bool = False
 ) -> npt.NDArray[np.uint8]:
     if rgb.shape[-1] != smscolor.RGB_CHANNELS:
         msg = f"expected a trailing RGB axis, got shape {rgb.shape}"
@@ -136,11 +138,24 @@ def quantise_levels(
         msg = f"dithering needs a height and width axis, got shape {rgb.shape}"
         raise ValueError(msg)
     scaled = rgb.astype(np.float32) * (top / BYTE_MAX)
-    if dither > NO_DITHER:
-        height, width = rgb.shape[0], rgb.shape[1]
-        repeats = (height // DITHER_SIDE + 1, width // DITHER_SIDE + 1)
-        scaled = scaled + (np.tile(_BAYER, repeats)[:height, :width, None] * dither)
-    return np.clip(np.rint(scaled), 0, top).astype(np.uint8)
+    if dither == NO_DITHER:
+        return np.clip(np.rint(scaled), 0, top).astype(np.uint8)
+    lower = np.clip(np.floor(scaled), 0, top - 1)
+    share = _light_share(rgb, lower, top) if by_light else scaled - lower
+    height, width = rgb.shape[0], rgb.shape[1]
+    repeats = (height // DITHER_SIDE + 1, width // DITHER_SIDE + 1)
+    offset = np.tile(_BAYER, repeats)[:height, :width, None] * dither
+    return (lower + (share - HALF_STEP + offset >= 0.0)).astype(np.uint8)
+
+
+def _light_share(
+    rgb: npt.NDArray[np.uint8], lower: npt.NDArray[np.floating], top: int
+) -> npt.NDArray[np.float64]:
+    step = BYTE_MAX / top
+    below = colour.srgb_to_linear(lower * step / BYTE_MAX)
+    above = colour.srgb_to_linear((lower + 1) * step / BYTE_MAX)
+    light = colour.srgb_to_linear(rgb.astype(np.float64) / BYTE_MAX)
+    return np.clip((light - below) / (above - below), 0.0, 1.0)
 
 
 @cache
@@ -157,7 +172,7 @@ def _oklab_table(levels: int, chroma_weight: float) -> npt.NDArray[np.float32]:
     return lab
 
 
-MASTER_SYSTEM: Final = Lattice(target.MASTER_SYSTEM.channel_levels)
+MASTER_SYSTEM: Final = Lattice(target.MASTER_SYSTEM.channel_levels, dither_by_light=True)
 GAME_GEAR: Final = Lattice(target.GAME_GEAR.channel_levels)
 _BY_TARGET: Final = {target.MASTER_SYSTEM.name: MASTER_SYSTEM, target.GAME_GEAR.name: GAME_GEAR}
 

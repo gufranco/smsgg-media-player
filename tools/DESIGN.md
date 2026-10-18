@@ -770,8 +770,17 @@ levels a channel leaves wide steps, and a pale gradient rounds to flat
 plateaus that can change hue at the step: a grey-blue sky became blocks of
 grey and pink on the cartoon in the regression set.
 
-A dither adds a 4x4 Bayer threshold, scaled by `dither`, before rounding,
-so a value between two levels becomes a fixed mix of both in proportion.
+A dither compares a value's position between its two nearest levels with a
+4x4 Bayer threshold, scaled by `dither`, so a value between two levels
+becomes a fixed mix of both in proportion. With `by_light`, which the Master
+System's lattice sets, the position is the value's share of the light
+between the two levels rather than of the code values: the eye mixes the
+pixels as light, and four levels a channel leave steps wide enough for the
+difference to show. A grey of 42 sits halfway between 0 and 85 in code and a
+quarter of the way in light, so by code it lit twice the pixels it should
+and every dark and middle tone came out washed out. The Game Gear's sixteen
+levels sit close; there the change measured within noise and one sheet lost
+a colour, so it keeps the code value.
 The side divides the 8-pixel tile, which keeps the pattern identical
 wherever a tile lands and leaves tile reuse intact for flat regions. A
 value already on a level is never moved, since the threshold stays inside

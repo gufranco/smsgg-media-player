@@ -31,7 +31,7 @@ English | [日本語](README.ja.md) | [简体中文](README.zh-Hans.md) | [繁�
 
 <img src="readme/demo-gg.gif" alt="Six seconds of the Sintel trailer playing from the built Game Gear cartridge, drawn from the cartridge's stream" width="400">
 
-<sub>The same six seconds from the Game Gear cartridge, <code>--target gg</code>, at the panel's 160x144 and the same scale, with palettes from 4096 colours. Both demos come from <code>tools/scripts/make_demos.py</code>: the same window baked with the same settings, one GIF frame per film frame, 71 frames at 12 fps in each, so frame <i>n</i> shows the same moment on both. Each is drawn by the replay oracle from its cartridge's stream, because the player shows its position bar for the first three seconds of every play; once the bar is gone a headless mednafen capture matches each stream pixel for pixel.</sub>
+<sub>The same six seconds from the Game Gear cartridge, <code>--target gg</code>, at the panel's 160x144 and the same scale, with palettes from 4096 colours. Both demos come from <code>tools/scripts/make_demos.py</code>: the same window baked with the same settings, one GIF frame per film frame, 71 frames at 12 fps in each, so frame <i>n</i> shows the same moment on both. Each is drawn by the replay oracle from its cartridge's stream, and a headless mednafen capture of the cartridge matches it pixel for pixel: the menu is off by default, so the player draws nothing over the film.</sub>
 
 </div>
 
@@ -370,11 +370,15 @@ for the whole of that region's error, the 16-entries-per-cell selection costs
 zero, and the working set adds zero. More colours are what would fix it, and
 the hardware does not have them.
 
-So the quantiser dithers. A 4x4 Bayer threshold is added before rounding to
-the 64-colour grid, at full strength by default, through `--dither`. The side
-divides the 8-pixel tile, so flat regions still reuse tiles. A per-pixel
-metric scores any dither as loss, so it is judged by error measured after the
-same blur on both sides, and by eye on a rendered sheet:
+So the quantiser dithers. A value between two levels of the 64-colour grid
+becomes a fixed mix of both against a 4x4 Bayer threshold, at full strength
+by default, through `--dither`, and the mix follows the value's share of
+light, because the eye mixes the pixels as light. The side divides the
+8-pixel tile, so flat regions still reuse tiles. A per-pixel metric scores
+any dither as loss, so it is judged by error measured after the same blur on
+both sides, the blur on linear light, and by eye on a rendered sheet. The
+figures below were measured before 2026-10-18, with the blur on Oklab values
+and the mix by code value:
 
 | `--dither` | 0 | 0.5 | 0.75 | 1.0 |
 |---|---|---|---|---|
@@ -450,7 +454,7 @@ no remaining caller has since been deleted; the measurement is the record.
 - **Unsharp mask**: Dominated. Sharpen at 0.8 costs 2,692 bytes for 0.00678, while reuse 0.006 costs 2,664 for 0.00653
 - **Palette entries from the whole 64-colour lattice**: Identical entries on all 180 fits. The frame is already quantised onto that lattice, so the medoid and the projected centroid converge
 - **Chroma weight from 1.0 to 0.25**: Exactly flat
-- **Dithering in linear light**: Each blurred metric favours the dither done in its own space: 0.0260 against 0.0408 blurred in Oklab, 0.0370 against 0.0302 blurred in linear light, on the cartoon. Rendered, it turns the cartoon's trees orange-red and patches the sky; on game footage it is mixed. Kept off
+- **Dithering in linear light**: Shipped on the Master System on 2026-10-18. An earlier attempt was kept off when its sheet turned the cartoon's trees orange-red, and each blurred metric then favoured the dither done in its own space. The blur on Oklab values turned out to be the wrong judge: it scored grey blocks of a stale scene above a correct fade to black. Placing a value between its two nearest levels by its share of light, judged with the blur on light, cut block-mean light error 22% to 72% on the six regression clips, and the sheets keep the cartoon's trees olive and its suits dark. The Game Gear keeps the code value: within noise there, and one sheet lost a colour
 - **An 8x8 Bayer matrix, or an 8x8 blue-noise mask**: Level on the cartoon and worse on game footage, 0.0424 and 0.0431 against 0.0412
 - **An exact palette fit, packing each cell's colours into the two palettes**: Applied on 42 of 143 cartoon frames and 1 of 99 game frames, and worse on the cartoon, 0.0265 against 0.0258 with 43 banks against 37
 - **Guarding the kept palettes so no cell gets worse than under a fresh fit**: Kept fewer frames and lost most of the gain: game footage 0.0376 against 0.0365 unguarded, with more badly-off cells, 129 against 122

@@ -107,9 +107,19 @@ CRT returns: no composite model and no `--gamut-dither`.
 - A dither moves pixels off the source on purpose, so per-pixel error scores
   it as loss by construction. It is judged by Oklab error after the same blur
   on both sides, against one fixed reference, and by a rendered sheet looked
-  at beside the source. Both must agree.
-- The quantiser adds a tile-aligned 4x4 Bayer threshold before rounding,
-  full strength by default through `--dither`, then draws each pixel through
+  at beside the source. Both must agree. The blur runs on linear light,
+  because neighbouring pixels mix as light: until 2026-10-18 it ran on Oklab
+  values, read every dark dither as darker than it looks, and scored grey
+  blocks of a stale scene above the correct fade to black.
+- The quantiser places each pixel between its two nearest levels against a
+  tile-aligned 4x4 Bayer threshold, full strength by default through
+  `--dither`. On the Master System it places them by share of light,
+  `Lattice.dither_by_light`: by code value it lit half the pixels of a dark
+  grey that should light a quarter, so dark and middle tones came out washed
+  out, and by light the block-mean light error fell 22% to 72% on the six
+  regression clips, with the sheets agreeing. The Game Gear keeps the code
+  value: its 16 levels a channel sit close, the numbers moved within noise,
+  and one sheet lost a green shirt to grey. It then draws each pixel through
   its cell's palette with the family's two-entry mix, `fmvcore.dither`. One
   path serves both consoles: on the Master System the mix almost never
   fires, on the Game Gear it is what carries the dither past the 32-entry
