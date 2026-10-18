@@ -19,16 +19,18 @@ class Golden:
     stream_bytes: int
     banks: int
     blurred_error: float
+    menu: bool = False
 
 
 GOLDENS = (
-    Golden(target.MASTER_SYSTEM, GEOMETRY, 38253, 3, 0.04364),
+    Golden(target.MASTER_SYSTEM, GEOMETRY, 52041, 4, 0.04276),
+    Golden(target.MASTER_SYSTEM, GEOMETRY, 38253, 3, 0.04364, menu=True),
     Golden(
         target.GAME_GEAR,
         bake.Geometry(columns=20, rows=18, top_row=3, left_column=6),
-        80843,
+        80501,
         6,
-        0.02449,
+        0.02383,
     ),
 )
 
@@ -57,6 +59,7 @@ def measured(golden: Golden) -> tuple[int, int, int, float]:
         budget=limits.DEFAULT_BUDGET,
         cap=limits.DEFAULT_CAP,
         system=golden.system,
+        menu=golden.menu,
     )
     fields = stream.defer_closes(encoded.frames)
     blob, banks = stream.pack_banks(fields, bank_size=limits.BANK_BYTES)
@@ -73,7 +76,9 @@ def measured(golden: Golden) -> tuple[int, int, int, float]:
     return size, banks, len(played.completes), error
 
 
-@pytest.mark.parametrize("golden", GOLDENS, ids=[golden.system.name for golden in GOLDENS])
+@pytest.mark.parametrize(
+    "golden", GOLDENS, ids=[f"{g.system.name}{'-menu' if g.menu else ''}" for g in GOLDENS]
+)
 class TestGoldenStream:
     def test_the_encoder_output_matches_the_blessed_stream(self, golden):
         # Arrange

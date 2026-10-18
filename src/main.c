@@ -31,6 +31,7 @@ static fmv_osd_view view;
 static fmv_transport transport;
 static bool diag_shown;
 static const fmv_key movie_keys[MOVIE_KEYS] = MOVIE_KEY_TABLE;
+static const volatile u8 movie_menu = MOVIE_MENU;
 
 static void hold_last_frame(void)
 {
@@ -45,6 +46,22 @@ static void read_input(void)
 {
     transport.pressed = (u16)SMS_getKeysPressed();
     transport.pause = (u8)fmv_pause_requested(transport.pressed);
+}
+
+static bool menu_on(void)
+{
+    return movie_menu != 0u;
+}
+
+static void open_overlays(void)
+{
+    if (!menu_on()) {
+        return;
+    }
+    fmv_osd_open();
+    if (diag_shown) {
+        fmv_diag_open();
+    }
 }
 
 static fmv_diagnostics diagnostics(void)
@@ -70,10 +87,7 @@ static void seek(s8 direction)
     fmv_screen_rest();
     fmv_movie_seek(&movie_keys[target]);
     view.where.elapsed_fields = movie_keys[target].field;
-    fmv_osd_open();
-    if (diag_shown) {
-        fmv_diag_open();
-    }
+    open_overlays();
 }
 
 static void show_diagnostics_now(void)
@@ -85,12 +99,26 @@ static void show_diagnostics_now(void)
 
 static void toggle_diagnostics(bool paced)
 {
+    if (!menu_on()) {
+        return;
+    }
     diag_shown = !diag_shown;
     if (!diag_shown) {
         fmv_diag_hide();
     } else if (paced) {
         fmv_diag_open();
     } else {
+        show_diagnostics_now();
+    }
+}
+
+static void show_paused(void)
+{
+    if (!menu_on()) {
+        return;
+    }
+    fmv_osd_show(&view);
+    if (diag_shown) {
         show_diagnostics_now();
     }
 }
@@ -103,10 +131,7 @@ static void wait_for_resume(void)
     fmv_pause_clear();
     SMS_waitForVBlank();
     view.paused = 1u;
-    fmv_osd_show(&view);
-    if (diag_shown) {
-        show_diagnostics_now();
-    }
+    show_paused();
     do {
         SMS_waitForVBlank();
         read_input();
@@ -117,7 +142,9 @@ static void wait_for_resume(void)
     } while ((actions & FMV_ACT_RESUME) == 0u);
     fmv_pause_clear();
     view.paused = 0u;
-    fmv_osd_state();
+    if (menu_on()) {
+        fmv_osd_state();
+    }
 }
 
 static void wait_for_wake(void)
@@ -143,6 +170,9 @@ static void toggle_sound(void)
 
 static void apply_overlay(u16 actions)
 {
+    if (!menu_on()) {
+        return;
+    }
     if ((actions & FMV_ACT_SHOW) != 0u) {
         fmv_osd_open();
     }
@@ -191,6 +221,9 @@ static fmv_outcome handle_input(void)
 
 static void draw_overlays(void)
 {
+    if (!menu_on()) {
+        return;
+    }
     fmv_osd_work(&view);
     if (diag_shown) {
         const fmv_diagnostics seen = diagnostics();
@@ -207,10 +240,7 @@ static void begin(void)
     view.paused = 0u;
     view.muted = fmv_movie_muted();
     fmv_transport_begin(&transport);
-    fmv_osd_open();
-    if (diag_shown) {
-        fmv_diag_open();
-    }
+    open_overlays();
 }
 
 static fmv_outcome play_once(void)

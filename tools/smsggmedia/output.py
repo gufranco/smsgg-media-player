@@ -31,6 +31,7 @@ def write_header(
     hold_fields: int,
     first_bank_symbol: str,
     keys: tuple[Key, ...] = (Key(bank=0, offset=0, frame=0, field=0),),
+    menu: bool = False,
 ) -> None:
     check_header(
         frame_count=frame_count, field_count=field_count, hold_fields=hold_fields, keys=keys
@@ -47,6 +48,7 @@ def write_header(
         f"#define MOVIE_FIRST_BANK {first_bank_symbol}\n"
         f"#define MOVIE_KEYS {len(keys)}u\n"
         f"#define MOVIE_KEY_TABLE {_key_table(keys, first_bank_symbol)}\n"
+        f"#define MOVIE_MENU {int(menu)}u\n"
         "\n"
         "#endif\n"
     )
@@ -115,6 +117,7 @@ def publish(
     field_count: int,
     hold_fields: int,
     keys: tuple[Key, ...] = (Key(bank=0, offset=0, frame=0, field=0),),
+    menu: bool = False,
 ) -> None:
     clear(assets=assets, generated=generated)
     check_header(
@@ -132,6 +135,7 @@ def publish(
         hold_fields=hold_fields,
         first_bank_symbol=FIRST_BANK_SYMBOL,
         keys=keys,
+        menu=menu,
     )
     header.replace(generated / HEADER)
     film.replace(assets / FILM)

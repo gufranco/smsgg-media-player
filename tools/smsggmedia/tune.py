@@ -143,6 +143,7 @@ class EncodeSettings:
     upload_ceiling: int | None = None
     dither: float = bake.DEFAULT_DITHER
     system: target.Target = target.DEFAULT
+    menu: bool = False
 
 
 def score_windows(
@@ -215,6 +216,7 @@ def _window_cost(
         upload_ceiling=settings.upload_ceiling,
         dither=settings.dither,
         system=settings.system,
+        menu=settings.menu,
     )
     sizes = [sum(len(chunk) for chunk in chunks) for chunks in encoded.frames]
     blurred = 0.0 if wanted is None else replayed_error(encoded, wanted, geometry=settings.geometry)

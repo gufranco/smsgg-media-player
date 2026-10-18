@@ -53,7 +53,7 @@ class TestTheArtIndices:
         assert indices == [12, 13, 14, 15, 15, 0]
 
 
-class TestEveryFittedPalette:
+class TestAFittedPalette:
     @pytest.mark.parametrize("space", [lattice.MASTER_SYSTEM, lattice.GAME_GEAR], ids=["sms", "gg"])
     def test_its_last_four_sprite_entries_are_the_menu(self, space):
         # Arrange
@@ -61,10 +61,21 @@ class TestEveryFittedPalette:
         frame = rng.integers(0, 256, size=(16, 16, 3), dtype=np.uint8)
 
         # Act
-        fitted = palettes.fit_or_keep(frame, None, margin=0.3, space=space)
+        fitted = palettes.fit_or_keep(frame, None, margin=0.3, space=space, menu=True)
 
         # Assert
         assert fitted.cram[28:32].tolist() == menu.colours(space).tolist()
+
+    def test_without_the_menu_the_film_keeps_all_sixteen_sprite_entries(self):
+        # Arrange
+        rng = np.random.default_rng(3)
+        frame = rng.integers(0, 256, size=(16, 16, 3), dtype=np.uint8)
+
+        # Act
+        fitted = palettes.fit_or_keep(frame, None, margin=0.3)
+
+        # Assert
+        assert len(set(fitted.cram[16:32].tolist())) == 16
 
 
 ROOT = Path(__file__).resolve().parents[2]

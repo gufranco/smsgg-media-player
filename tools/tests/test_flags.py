@@ -333,3 +333,55 @@ class TestTheTarget:
 
         # Assert
         assert code == 2
+
+
+class TestTheMenuFlag:
+    def test_the_menu_is_off_by_default(self):
+        # Arrange
+        parser = flags.build_parser()
+
+        # Act
+        args = parser.parse_args([FILM])
+
+        # Assert
+        assert args.menu is False
+
+    def test_asking_for_the_menu_turns_it_on(self):
+        # Arrange
+        parser = flags.build_parser()
+
+        # Act
+        args = parser.parse_args([FILM, "--menu"])
+
+        # Assert
+        assert args.menu is True
+
+    def test_its_help_says_what_it_costs_the_picture(self):
+        # Arrange
+        parser = flags.build_parser()
+
+        # Act
+        text = parser.format_help()
+
+        # Assert
+        assert "lowers picture quality" in " ".join(text.split())
+
+    def test_a_bake_with_the_menu_warns_about_the_colours_it_keeps(self, capsys):
+        # Arrange
+        args = flags.build_parser().parse_args([FILM, "--menu"])
+
+        # Act
+        cartridge._announce_menu(args)
+
+        # Assert
+        assert capsys.readouterr().err == cartridge.MENU_WARNING + "\n"
+
+    def test_a_bake_without_it_says_nothing(self, capsys):
+        # Arrange
+        args = flags.build_parser().parse_args([FILM])
+
+        # Act
+        cartridge._announce_menu(args)
+
+        # Assert
+        assert capsys.readouterr().err == ""

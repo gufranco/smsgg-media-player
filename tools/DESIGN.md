@@ -411,6 +411,12 @@ passes half a step and moves a value already on a level.
 
 The menu's colours on this console, and which palette entries hold them.
 
+The menu is drawn only in a cartridge baked with `--menu`, and the bake warns
+that it costs the film 4 of its 32 colours; the owner made it opt-in on
+2026-10-17 because the picture comes first. The flag reaches the dial search
+through `tune.EncodeSettings.menu`, so the dials are measured on the palette
+the film will really get, and the header's `MOVIE_MENU` tells the player.
+
 The family's menu is one menu, owner's instruction of 2026-10-17, so its
 colours are the Neo Geo player's, `fmvcore.font.MENU_COLOURS`, converted to
 each lattice by rounding each 5-bit channel to the nearest level. Panel, ink,
@@ -437,9 +443,9 @@ Fit the two hardware palettes to one frame, and assign a palette per cell.
 
 CRAM holds two palettes of 16 entries drawn from a 64-colour space, so 32
 colours reach the screen at once and a cell picks one palette for all 64 of
-its pixels. The second palette is also the sprites', and its last four
-entries are the menu's, written by `_fit_tables` from `menu.colours` into
-every fitted table: the film fits 28 colours, and a cell on the second
+its pixels. The second palette is also the sprites', and with `--menu` its
+last four entries are the menu's, written by `_fit_tables` from
+`menu.colours` into every fitted table: the film fits 28 colours, and a cell on the second
 palette may still use a menu colour when one is close, since those entries
 never change. Measured on the six regression films, keeping them moved the
 Master System's displayed error by at most 3% either way and raised the

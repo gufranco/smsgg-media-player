@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Final
+from typing import Final, TypedDict, Unpack
 
 import numpy as np
 import numpy.typing as npt
@@ -103,6 +103,7 @@ class Encoder:
     dither: float = DEFAULT_DITHER
     palette_margin: float = PALETTE_KEEP_MARGIN
     system: target.Target = target.DEFAULT
+    menu: bool = False
     cram: npt.NDArray[np.uint16] | None = field(default=None, init=False)
     cache: workingset.WorkingSet = field(init=False)
     committed: npt.NDArray[np.int64] = field(init=False)
@@ -140,6 +141,7 @@ class Encoder:
             chroma_weight=self.chroma_weight,
             ordered_dither=self.dither,
             space=lattice.for_target(self.system),
+            menu=self.menu,
         )
         self.cram = fitted.cram
         self.unknown_tables = BOTH_TABLES if keyframe else self.unknown_tables
@@ -280,33 +282,27 @@ class Encoder:
         return self.encoded
 
 
+class EncoderOptions(TypedDict, total=False):
+    capacity: int
+    reserved: int
+    chroma_weight: float
+    reuse_threshold: float
+    upload_ceiling: int | None
+    dither: float
+    system: target.Target
+    menu: bool
+
+
 def encode_frames(
     frames: list[npt.NDArray[np.uint8]],
     *,
     geometry: Geometry,
     budget: int,
     cap: int,
-    capacity: int = PATTERN_SLOTS,
-    reserved: int = RESERVED_SLOTS,
-    chroma_weight: float = 1.0,
-    reuse_threshold: float = DEFAULT_REUSE,
-    upload_ceiling: int | None = None,
-    dither: float = DEFAULT_DITHER,
-    system: target.Target = target.DEFAULT,
+    **options: Unpack[EncoderOptions],
 ) -> Encoded:
     _require_frames(frames)
-    encoder = Encoder(
-        geometry=geometry,
-        budget=budget,
-        cap=cap,
-        capacity=capacity,
-        reserved=reserved,
-        chroma_weight=chroma_weight,
-        reuse_threshold=reuse_threshold,
-        upload_ceiling=upload_ceiling,
-        dither=dither,
-        system=system,
-    )
+    encoder = Encoder(geometry=geometry, budget=budget, cap=cap, **options)
     for frame in frames:
         encoder.add(frame)
     return encoder.result()

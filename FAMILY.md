@@ -110,6 +110,12 @@ the requirement.
   never differently, and its state section names the limit, such as the
   Master System's eight sprites a line, with its figure and source. A change
   to one player's menu is made in every player in the same task.
+- **A menu that costs the picture is off by default.** Owner's instruction,
+  2026-10-17: where drawing the menu takes something from the film, as the
+  Master System and Game Gear menu takes 4 of the film's 32 colours, the
+  baker leaves it out unless asked, and asking for it prints a warning that
+  the picture will lose quality. The controls work either way; only what is
+  drawn over the picture changes.
 
 ## How a new member starts
 
@@ -350,7 +356,9 @@ Differences the hardware forces:
   tile, and the clock shows one minute digit below ten minutes. There is no
   speed, because fast forward is not possible here. Its four colours are the
   last four of the sprite palette, kept out of the film, so a frame has 28
-  colours rather than 32.
+  colours rather than 32. For that reason the menu and the diagnostics are
+  drawn only in a cartridge baked with `--menu`, which warns about the cost;
+  by default the film keeps all 32 colours and nothing is drawn over it.
 - Subtitles are burned into the picture, so they cannot be switched off. The
   Master System has no text layer to draw them on separately.
 - Fast forward and rewind are not possible: moving one frame already takes up

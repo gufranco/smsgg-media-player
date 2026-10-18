@@ -38,6 +38,11 @@ P90: Final = 0.9
 MOST_MERGED_SHOWN: Final = 3
 BAR_ANALYSIS_SECONDS: Final = 8.0
 
+MENU_WARNING: Final = (
+    "warning: --menu keeps 4 of the film's 32 colours for the menu and diagnostics, "
+    "so every frame of the picture has 28; leave it off for the best picture"
+)
+
 
 def rom_for(system: target.Target) -> Path:
     return Path("build") / f"smsggmedia{system.extension}"
@@ -202,6 +207,7 @@ def _picture_encoder(
         upload_ceiling=args.upload_ceiling,
         dither=args.dither,
         system=args.target,
+        menu=args.menu,
     )
 
 
@@ -301,6 +307,7 @@ def bake_cartridge(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
     geometry = geometry_for(*flags.picture_size(args))
     _describe_source(args.source, info=info, geometry=geometry)
     _announce_silence(args)
+    _announce_menu(args)
 
     wanted = _checked_window(parser, args, source_seconds=info.duration)
     _analyse_source(parser, args, wanted=wanted)
@@ -389,6 +396,11 @@ def _describe_bake(baked: Baked, *, fps: float) -> None:
         print(f"the clock passed the last {baked.unshown_tail} decoded frames before they fit")
 
 
+def _announce_menu(args: argparse.Namespace) -> None:
+    if args.menu:
+        print(MENU_WARNING, file=sys.stderr)
+
+
 def _announce_silence(args: argparse.Namespace) -> None:
     if not args.silent and not ffmpeg.has_audio(args.source):
         print(
@@ -438,6 +450,7 @@ def _publish(
         field_count=sum(len(frame) for frame in baked.fields),
         hold_fields=rate.fields_for(settled.fps),
         keys=seek_points(baked, packed),
+        menu=args.menu,
     )
     if args.bundle is not None:
         _write_bundle(args, baked=baked, packed=packed, geometry=geometry)

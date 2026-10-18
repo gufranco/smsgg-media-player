@@ -340,3 +340,24 @@ class TestFrameLimits:
 
         # Assert
         assert "#define MOVIE_FRAMES 65535u\n" in path.read_text()
+
+
+class TestTheMenuSwitch:
+    @pytest.mark.parametrize(("menu", "line"), [(False, "0u"), (True, "1u")], ids=["off", "on"])
+    def test_the_header_tells_the_player_whether_to_draw_the_menu(self, tmp_path, menu, line):
+        # Arrange
+        path = tmp_path / "movie.h"
+
+        # Act
+        output.write_header(
+            path,
+            banks=1,
+            frame_count=2,
+            field_count=9,
+            hold_fields=6,
+            first_bank_symbol="bank",
+            menu=menu,
+        )
+
+        # Assert
+        assert f"#define MOVIE_MENU {line}\n" in path.read_text()

@@ -327,3 +327,36 @@ class TestTheEndOfAFilm:
 
         # Assert
         assert guarded is True
+
+
+class TestTheMenuSwitchInThePlayer:
+    def test_the_player_reads_the_switch_from_the_header_at_run_time(self):
+        # Arrange
+        text = MAIN_SOURCE.read_text()
+
+        # Act
+        declared = "static const volatile u8 movie_menu = MOVIE_MENU;" in text
+
+        # Assert
+        assert declared is True
+
+    def test_every_overlay_entry_point_in_main_checks_it(self):
+        # Arrange
+        text = MAIN_SOURCE.read_text()
+
+        # Act
+        guarded = [
+            name
+            for name in (
+                "open_overlays",
+                "toggle_diagnostics",
+                "show_paused",
+                "apply_overlay",
+                "draw_overlays",
+            )
+            if "if (!menu_on()) {\n        return;\n    }"
+            in text[text.index(f"static void {name}(") :].split("\n}\n", 1)[0]
+        ]
+
+        # Assert
+        assert len(guarded) == 5

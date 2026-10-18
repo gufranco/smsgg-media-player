@@ -138,6 +138,12 @@ def add_stream_flags(parser: argparse.ArgumentParser) -> None:
         help="send each frame as soon as it is ready instead of padding it to its slot",
     )
     parser.add_argument(
+        "--menu",
+        action="store_true",
+        help="draw the media-player menu and the diagnostics; they keep 4 of the film's "
+        "32 colours, which lowers picture quality. Default: off",
+    )
+    parser.add_argument(
         "--silent",
         action="store_true",
         help="leave sound out and give its share of each field to the picture",

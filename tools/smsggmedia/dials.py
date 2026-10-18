@@ -114,6 +114,7 @@ def settle_dials(args: argparse.Namespace, *, geometry: bake.Geometry, wanted: f
         upload_ceiling=args.upload_ceiling,
         dither=args.dither,
         system=args.target,
+        menu=args.menu,
     )
     rate_denoise = RATE_SEARCH_DENOISE if args.denoise == AUTO else float(args.denoise)
     fps = resolve_rate(args.fps, footage, settings, denoise=rate_denoise)

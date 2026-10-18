@@ -59,6 +59,11 @@ now spends no more than the room it started with. And the panel needs 26
 sprite tiles where the hidden name table rows hold 24; the sprite table's 64
 unused bytes hold the other two. None of this has run on a console.
 
+Later the same day the owner made the menu opt-in: a cartridge has it only
+when baked with `--menu`, which warns that the film loses 4 of its 32
+colours, and by default the film keeps them all and nothing is drawn over
+the picture. The controls work either way.
+
 ## Flat blocks on the Game Gear
 
 The owner saw the Game Gear demo still far blockier than the Master System

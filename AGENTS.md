@@ -665,11 +665,16 @@ its text uses the 3 by 5 glyphs two to a tile, and the clock shows one
 minute digit below ten minutes. The diagnostics rows moved above it, to
 sprite y 103 and 115. None of this has run on a console.
 
-The menu's four colours, panel, white, orange and grey, are the last four
-entries of the sprite palette, 28 to 31, and the baker keeps them out of the
-film: every palette the film loads carries them, so the menu never recolours
-the film and the replay no longer writes ink bytes after the closing run. The
-film has 28 colours a frame instead of 32. The colours come from
+The menu is off by default, owner's instruction of 2026-10-17: `--menu`
+turns it and the diagnostics on and prints a warning, because its four
+colours, panel, white, orange and grey, are the last four entries of the
+sprite palette, 28 to 31, kept out of the film. With `--menu` every palette
+the film loads carries them, so the menu never recolours the film and the
+film has 28 colours a frame instead of 32; without it the film keeps all 32
+and the player draws nothing over the picture. The baker writes
+`MOVIE_MENU` into the header, and the player reads it through a `const
+volatile` byte, so neither branch is dead code SDCC would refuse. The replay
+no longer writes ink bytes after the closing run either way. The colours come from
 `fmvcore.font.MENU_COLOURS`, the Neo Geo's own, converted to each console's
 lattice by `smsggmedia.menu`, and `src/sms/fmv_target.h` and
 `src/gg/fmv_target.h` carry the same values, held equal by a test. The panel's
