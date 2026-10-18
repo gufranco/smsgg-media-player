@@ -643,8 +643,11 @@ still matters, because the library half places a smaller picture.
 ## What is not done
 
 **The player ran on hardware on 2026-10-17.** The owner ran the current build
-on a Master System and on a Game Gear with an Everdrive and reported no defect
-so far. That covers every player change listed here before it: the replay's
+on a Japanese Master System and on a Game Gear with an IPS replacement screen,
+both through an Everdrive, and reported no defect so far. The Japanese Master
+System carries the first video chip, 315-5124, so nothing here has run on the
+Master System 2's chip, which drops palette writes that come too fast. An IPS
+panel does not blend or smear as the original Game Gear LCD does. That covers every player change listed here before it: the replay's
 refusal of run kind `0x03`, the backdrop on an assertion halt, the cursor
 assertion below `0xC000`, the sound run written to the PSG 34 T-states apart,
 pause on the Pause NMI, the position bar and diagnostics, deferred-field
