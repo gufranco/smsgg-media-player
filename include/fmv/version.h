@@ -1,6 +1,6 @@
 #ifndef FMV_VERSION_H
 #define FMV_VERSION_H
 
-#define FMV_VERSION "0.1.0"
+#define FMV_VERSION "1.0.0"
 
 #endif
