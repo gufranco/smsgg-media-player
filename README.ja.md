@@ -7,11 +7,10 @@
 
 [English](README.md) | 日本語 | [简体中文](README.zh-Hans.md) | [繁體中文（香港）](README.zh-HK.md)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/gufranco/smsgg-media-player/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)](RELEASES.md)
-[![Licence](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)](LICENSE)
-[![Target](https://img.shields.io/badge/target-Master%20System%20%2B%20Game%20Gear-red?style=flat-square)](#ハードウェアの上限)
-[![Hardware](https://img.shields.io/badge/hardware-Master%20System%20%2B%20Game%20Gear-brightgreen?style=flat-square)](#検証)
+[![ci](https://img.shields.io/github/actions/workflow/status/gufranco/smsgg-media-player/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/gufranco/smsgg-media-player?style=flat-square&label=release)](https://github.com/gufranco/smsgg-media-player/releases/latest)
+[![coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=flat-square)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
+[![license](https://img.shields.io/github/license/gufranco/smsgg-media-player?style=flat-square&label=license)](LICENSE)
 
 </div>
 
