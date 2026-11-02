@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/gufranco/smsgg-media-player/compare/v1.0.0...v1.1.0) (2026-11-02)
+
+
+### Features
+
+* **palettes:** choose by blur and pair palettes ([9200b64](https://github.com/gufranco/smsgg-media-player/commit/9200b6432e723eb6e55a0eb3f6b99fcbae45b73d))
+
 # 1.0.0 (2026-10-23)
 
 
