@@ -26,6 +26,10 @@ DEFAULT_DITHER: Final = 1.0
 PALETTE_KEEP_MARGIN: Final = 0.3
 MAX_DITHER: Final = dither.MAX_DITHER
 DEFAULT_SCALER: Final = "area"
+PIXEL_ASPECT: Final = {
+    target.MASTER_SYSTEM.name: console.NTSC_PIXEL_ASPECT,
+    target.GAME_GEAR.name: 1.0,
+}
 MAX_DENOISE: Final = 64.0
 MAX_SOURCE_SECONDS: Final = 4 * 60 * 60
 DEFAULT_FPS: Final = 12.0

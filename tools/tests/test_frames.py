@@ -6,6 +6,9 @@ from smsggmedia import frames
 
 pytestmark = pytest.mark.ffmpeg
 
+WHITE_ENOUGH = 200
+DARK_ENOUGH = 20
+
 
 @pytest.fixture(scope="module")
 def clip(tmp_path_factory):
@@ -252,3 +255,59 @@ class TestBakedInBars:
 
         # Assert
         assert int(result[0][0].max()) < 24
+
+
+@pytest.fixture(scope="module")
+def banded(tmp_path_factory):
+    path = tmp_path_factory.mktemp("banded") / "source.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=black:size=320x240:rate=30:duration=1",
+            "-vf",
+            "drawbox=x=0:y=0:w=320:h=12:color=white:t=fill",
+            "-pix_fmt",
+            "yuv420p",
+            str(path),
+        ],
+        check=True,
+    )
+    return path
+
+
+class TestPixelAspect:
+    def test_square_pixels_keep_a_four_by_three_source_whole(self, banded):
+        # Arrange
+        source = banded
+
+        # Act
+        shown = next(iter(frames.decode(source, width=256, height=192, fps=5)))
+
+        # Assert
+        assert shown[0].mean() > WHITE_ENOUGH
+
+    def test_wide_pixels_crop_a_four_by_three_source_top_and_bottom(self, banded):
+        # Arrange
+        source = banded
+
+        # Act
+        shown = next(iter(frames.decode(source, width=256, height=192, fps=5, pixel_aspect=8 / 7)))
+
+        # Assert
+        assert shown[0].mean() < DARK_ENOUGH
+
+    def test_wide_pixels_still_fill_the_raster(self, banded):
+        # Arrange
+        source = banded
+
+        # Act
+        shown = next(iter(frames.decode(source, width=256, height=192, fps=5, pixel_aspect=8 / 7)))
+
+        # Assert
+        assert shown.shape == (192, 256, 3)

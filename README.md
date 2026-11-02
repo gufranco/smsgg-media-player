@@ -153,12 +153,14 @@ rather than showing stale patches.
 ### The picture is the whole screen
 
 All 256 by 192 pixels, with nothing framing it. A source of another shape is
-scaled until it covers the raster and then cropped to it, so a 16:9 film loses
-about a quarter of its width and every pixel the console draws carries film.
+scaled until it covers the raster and then cropped to it. The crop follows the
+shape a television shows, where a Master System pixel is 8/7 as wide as it is
+tall, so a 16:9 film loses about a seventh of its width and every pixel the
+console draws carries film. The Game Gear's pixels are taken as square.
 
 Bars are not free here. They would be encoded, take pattern slots, and be
-transferred every field, so letterboxing a 16:9 source spends a quarter of the
-working set and a quarter of the per-field budget delivering black.
+transferred every field, so letterboxing a 16:9 source spends a seventh of the
+working set and a seventh of the per-field budget delivering black.
 
 `--rows` and `--columns` still build a smaller picture, which is what the
 library half needs. The picture is centred, and the rows and columns it leaves
@@ -179,6 +181,8 @@ best. `--silent` leaves sound out and gives its 15 bytes a field back to the
 picture. The player never enables the line interrupt, so the whole field,
 active display included, stays free for the transfer loop. It has played on a
 Master System and a Game Gear.
+
+To hear a bake before it reaches a console, `uv --project tools run python tools/scripts/render_psg.py assets/movie.bin --out film.wav` plays the stream's PSG writes through a model of the SN76489: the three square-wave tones, the noise channel's 16-bit shift register and the 2 dB attenuation steps, and both headphone sides of a Game Gear film with `--target gg`. It is a model, so the console's own speaker stays the verdict.
 
 It still writes the PSG once, at boot: full attenuation on all four channels.
 A console powers up with its tone channels audible, so leaving the chip alone
@@ -262,7 +266,7 @@ make timing     # VDP write spacing, read out of the assembler's own listing; TA
 
 `--preview` writes four frames from across the film as the console will draw
 them, each beside its source, so a bake can be judged without an emulator.
-Given a `.mp4`, it writes a video of every field the console draws instead.
+Given a `.mp4`, it writes a video of every field the console draws instead, enlarged eight times with every pixel kept sharp, in a form every phone and computer plays; a `.mkv` is lossless at the console's size.
 The report in `build/report.json` names `cells_merged`, the cells that showed
 a merged tile instead of their own, and `most_merged_frames`, the frames that
 lost the most, so a poor result can be traced to the frames that caused it.

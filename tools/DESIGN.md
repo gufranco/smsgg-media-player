@@ -112,8 +112,9 @@ silent cartridge never comes as a surprise.
 
 The picture is 32 by 24 cells, which is 256 by 192: the whole raster, edge to
 edge, with nothing framing it. A source of another shape is scaled until it
-covers that and then cropped to it, so a 16:9 film loses a quarter of its
-width rather than gaining bars.
+covers that and then cropped to it, in the shape a television shows: an NTSC
+pixel is 8/7 as wide as it is tall, so a 16:9 film loses about a seventh of
+its width rather than gaining bars.
 
 A `--budget` below what a field of the chosen console needs is refused before
 anything is decoded: twice its closing run, 68 bytes on the Master System and
@@ -347,7 +348,7 @@ console's grid.
 
 A source of any shape is scaled until it covers the raster and then cropped
 to it, so the picture fills the screen and never carries bars of its own. It
-is the deliberate trade: a 16:9 source loses a quarter of its width, and in
+is the deliberate trade: a 16:9 source loses about a seventh of its width, and in
 exchange every one of the 49,152 pixels the console can draw is film. Bars
 baked into the frames would be worse than they look, because the encoder
 would spend pattern slots and transfer budget on them all the way to the
@@ -952,6 +953,29 @@ This is tone synthesis, not sample playback: speech and dense mixes come out
 as tones. Sample playback through the attenuators is the alternative the
 sound plan measures, and it would rewrite the replay's timing.
 
+### [`smsggmedia/psgplay.py`](smsggmedia/psgplay.py)
+
+Play a baked stream's PSG writes back as sound, so a bake can be heard
+without a console.
+
+It follows the SN76489 as SMS Power describes it: the clock divided by 16,
+each tone a square wave flipping every time its 10-bit counter runs out, so
+register `$0FE` plays 440.4 Hz; a register of 0 or 1 holding the output
+high; the noise channel counting `$10`, `$20` or `$40`, or tone 2's period,
+and shifting a 16-bit register tapped at bits 0 and 3 on every second count,
+reset to `$8000` by any noise write; and 2 dB of attenuation a step, 15
+silent. A latch byte sets a register's low 4 bits and a data byte a tone's
+high 6, as the chip does. Each field's writes land at its start, as the
+player sends them before the picture, and the Game Gear's stereo byte routes
+each channel to the left and right side.
+
+It works field by field rather than tick by tick: a tone's toggles are a
+closed form of its period and phase, and only the noise register steps in a
+loop, about a hundred shifts a field, so four minutes render in seconds. The
+state is immutable: every write and every field returns a new chip and new
+voices. It is a model, so it hears what the stream asks for, never the analog
+stage of a real console, and the console stays the verdict.
+
 ### [`smsggmedia/stepdown.py`](smsggmedia/stepdown.py)
 
 Step a bake down until it fits the cartridge.
@@ -1370,6 +1394,39 @@ The player compiles the header in; the script runs on the host, because the
 toolchain image has no Python packages. `tests/test_menu_art.py` fails when
 the committed header differs from what the art generates, so a change to the
 shared art reaches this player through one command.
+
+### [`scripts/render_psg.py`](scripts/render_psg.py)
+
+Write a baked film's sound as a WAV through `smsggmedia.psgplay`: mono for
+the Master System, the two headphone sides for `--target gg`. A missing film
+is refused by name. It reads the stream the baker writes, `assets/movie.bin`
+by default, so what plays is what the cartridge carries.
+
+### [`scripts/trace_vdp.py`](scripts/trace_vdp.py)
+
+Run a built ROM headless under MAME and check every VDP port access it makes,
+from power-on, against the documented floors.
+
+The static walk in `make timing` charges a call into SMSlib its call cycles
+only, so a library's own writes were never measured. This runs the cartridge
+instead: [`scripts/vdp_trace.lua`](scripts/vdp_trace.lua) taps ports `$BE`,
+`$BF` and `$7E` and writes each access with its frame, the V counter, the
+program counter and MAME's time, and the checks run in Python. Two accesses
+in one frame must sit 29 T-states apart while the display is on and the
+line is drawn, 16 otherwise; a palette byte or a name table flip must land
+outside the drawn lines; nothing may write the data port between the two
+control bytes; and nothing may write `$7E`, which reaches the PSG. The
+display state follows register 1, so a reset with the display off is held to
+the blanking floor. MAME's Mark III driver, `sg1000m3`, and its Game Gear
+driver run a cartridge with no BIOS.
+
+The trace is exact to the cycle. Over 300 frames of the Master System ROM,
+273,348 accesses, every gap in the drawn lines is 30 T-states or more and
+the guarded palette copy measures 16. Before the devkitSMS crt0 was padded,
+it found SMSlib's address setup at power-on, 12 T-states between the two
+control bytes, at program counter `$000F`. MAME is the instrument here, not
+the witness of a picture: it settles when a write happens, which no
+emulator's picture shows.
 
 ### [`scripts/fetch_clips.py`](scripts/fetch_clips.py)
 

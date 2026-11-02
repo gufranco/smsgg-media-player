@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import subprocess
+from fractions import Fraction
 from pathlib import Path
 from typing import Final
 
 import numpy as np
 import numpy.typing as npt
-from fmvcore import ffmpeg
+from fmvcore import ffmpeg, video
 
 from smsggmedia import bake, capture, console, pattern
 
 PREVIEW_FRAMES: Final = 4
 VIDEO_SUFFIXES: Final = frozenset({".mp4", ".mkv", ".mov"})
-VIDEO_QUALITY: Final = 12
+FIELD_RATE: Final = Fraction(console.NTSC_CPU_HZ, console.NTSC_LINES * console.CYCLES_PER_LINE)
+CHECKED_FIELDS: Final = 60
 
 
 def write(
@@ -51,32 +53,12 @@ def write_video(path: Path, *, blob: bytes, geometry: bake.Geometry) -> None:
     fields = capture.replay_fields(blob).fields
     top = geometry.top_row * pattern.TILE_PX
     left = geometry.left_column * pattern.TILE_PX
-    shown = fields[:, top : top + geometry.height, left : left + geometry.width]
-    rate = f"{console.NTSC_CPU_HZ}/{console.NTSC_LINES * console.CYCLES_PER_LINE}"
-    command = [
-        ffmpeg.require_tool("ffmpeg"),
-        "-y",
-        "-loglevel",
-        "error",
-        "-f",
-        "rawvideo",
-        "-pix_fmt",
-        "rgb24",
-        "-s",
-        f"{geometry.width}x{geometry.height}",
-        "-framerate",
-        rate,
-        "-i",
-        "-",
-        "-c:v",
-        "libx264",
-        "-crf",
-        str(VIDEO_QUALITY),
-        "-pix_fmt",
-        "yuv420p",
-        str(path),
-    ]
-    subprocess.run(command, input=np.ascontiguousarray(shown).tobytes(), check=True)
+    shown = np.ascontiguousarray(
+        fields[:, top : top + geometry.height, left : left + geometry.width]
+    )
+    picture = video.Picture(width=geometry.width, height=geometry.height, rate=FIELD_RATE)
+    subprocess.run(video.writer_command(path, picture), input=shown.tobytes(), check=True)
+    video.check(path, picture, list(shown[:CHECKED_FIELDS]))
 
 
 def save_png(path: Path, image: npt.NDArray[np.uint8]) -> None:

@@ -24,6 +24,7 @@ Nothing here is verified by compiling. Run the gate.
 | The baker holds | `uv --project tools run ruff format --check tools/`, `ruff check tools/`, `mypy tools/smsggmedia tools/scripts` |
 | The behaviour holds | `SMSGGMEDIA_CLIPS_REQUIRED=1 uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts --cov-config=tools/pyproject.toml --cov-fail-under=95` |
 | A commit is clean | [`.githooks/pre-commit`](.githooks/pre-commit), installed once by `make hooks` |
+| Every VDP write of the running ROMs keeps its floor | `uv --project tools run python tools/scripts/trace_vdp.py build/smsggmedia.sms` and `--target gg` on `build/smsggmedia.gg`: MAME headless, its Mark III and Game Gear drivers, no BIOS, every port access timed to the cycle from power-on. Local only; the hook sets `SMSGGMEDIA_MAME_REQUIRED=1` when the player changes |
 | It runs on a console | the Game Gear, reported by the owner; nothing on this machine settles it |
 
 ## What this project is
@@ -74,13 +75,16 @@ binding constraint moves from character ROM to bytes transferred per field.
 
 The film occupies all 256 by 192 pixels of the raster. There are no bars, no
 letterbox and no pillarbox, and a source of another shape is scaled until it
-covers the raster and then cropped to it. A 16:9 film loses about a quarter
-of its width, and that is the trade taken deliberately: every one of the
-49,152 pixels the console can draw carries film.
+covers the raster and then cropped to it. The crop follows the shape a
+television shows: an NTSC Master System pixel is 8/7 as wide as it is tall,
+so the raster shows as about 1.52 to 1, and a 16:9 film loses about a seventh
+of its width. That is the trade taken deliberately: every one of the 49,152
+pixels the console can draw carries film. The Game Gear's pixels are taken
+as square, since no source gives their shape.
 
 Bars are worse than they look on this machine. They are encoded, they take
 pattern slots, and they are transferred every field, so a letterboxed 16:9
-source spends a quarter of the working set and a quarter of the per-field
+source spends a seventh of the working set and a seventh of the per-field
 budget delivering black. Cropping spends none of it.
 
 Two things follow for anyone working here.
@@ -212,6 +216,7 @@ write spacing at all, and every check in this repository runs against one.
 | Z80 clock, NTSC | 3,579,545 Hz, 53.6931 MHz / 15 | [SMS Power, Clock Rate](https://www.smspower.org/Development/ClockRate) |
 | NTSC line and field | 228 T-states a line, 262 lines a field | MacDonald, as above |
 | NTSC field rate | 59.9227 Hz, derived: the clock over 262 lines of 228 T-states. `console.NTSC_FIELD_HZ` computes it rather than storing it | derived from the three rows above |
+| NTSC pixel shape | 8/7 as wide as tall, derived: the VDP draws 342 dots in the 228 T-states of a line, 5,369,318 dots a second, a 480i picture's square pixels are sampled at 12 3/11 MHz, so a dot drawn at half that rate, 6,136,364 a second, is square, and 6,136,364 over 5,369,318 is 8/7; `console.NTSC_PIXEL_ASPECT` computes it | MacDonald, as above, for 342 dots a line; [Wikipedia, Pixel aspect ratio](https://en.wikipedia.org/wiki/Pixel_aspect_ratio) for the 12 3/11 MHz square-pixel rate. No Sega document gives a pixel clock |
 | Line interrupt | counter reloaded on lines 193 to 261, so it never fires in the vertical blank | same |
 | Safe start window for a blank copy | V counter at or above `C0` and below `E0` | settled on hardware by a sibling project's vertical-blank copy |
 | Game Gear palette | 4096 colours, an entry `----BBBB GGGGRRRR` in two bytes; a write to an even CRAM address goes to a latch, and the odd write stores both | [SMS Power, Palette](https://www.smspower.org/Development/Palette); [ChibiAkumas, Master System and Game Gear](https://chibiakumas.com/z80/MasterSystemGameGear.php) for the bit layout |
@@ -260,10 +265,25 @@ Rules that follow:
   callee and a return reaches every call site, so a write just before a
   `ret` is measured against the caller's next write. Local labels such as
   `00104$` are scoped to their function, because SDCC reuses them.
-- SMSlib's own writes are outside the gate. A call into it is charged its
-  call cycles only, which can only make a path look faster. The player calls
-  it for the screen reset with the display off, the fault colour, the
-  vertical blank wait and the pad read.
+- The player writes the VDP only through its own code. SMSlib's address
+  setup, `_SMS_crt0_RST08` in the devkitSMS crt0, sends the two control bytes
+  with `out (c),l` and `out (c),h`, 12 T-states apart, under both documented
+  floors, and its fills space data bytes 28 apart. So the screen reset, the
+  palette entries, the display switch and the assertion halt go through
+  `fmv_vdp_fill`, `fmv_vdp_register` and `fmv_vdp_copy` in `src/vdp.s` and
+  [`src/vdpcopy.s`](src/vdpcopy.s), padded to 30, and the fault colour waits
+  for the vertical blank first. SMSlib still serves the vertical blank wait,
+  the pad read and the V counter, which write nothing to the VDP.
+  [`tools/tests/test_screen_on_z80.py`](tools/tests/test_screen_on_z80.py)
+  holds every port access of the reset to 29 on both ROMs, and fails on the
+  SMSlib version. A call into SMSlib is charged its call cycles only.
+- `SMS_init`, which the crt0 calls before `main`, still writes through
+  SMSlib once at power-on: the sprite palette's entry 0, the registers and the
+  sprite table, after it waits for V counter `$C8`. The image pads the crt0's
+  address setup with five `nop`, 32 T-states between the two control bytes,
+  and the [Dockerfile](Dockerfile) checks the patch in the same layer, so
+  that path clears the floor too. [`tools/scripts/trace_vdp.py`](tools/scripts/trace_vdp.py) found it at
+  12 T-states before the patch and passes from power-on after it.
 - The two control-port bytes of an address setup are held to 29 as well,
   inside the guarded block too. Sega's documentation gives the same floor for
   VRAM, CRAM and registers, and the documented figure binds, so every pair in
@@ -672,12 +692,13 @@ button 2, and the black and white sprite entries the replay writes while the
 overlay is up. The report did not itemise each check, so a defect found later
 on any of them goes back on this list with what was seen.
 
-Still open: a listening verdict on the PSG sound. The dither stays on by
+Still open: a listening verdict on the PSG sound. [`tools/scripts/render_psg.py`](tools/scripts/render_psg.py) plays a bake's writes through a model of the chip for a first listen; the verdict stays with a console. The dither stays on by
 default on both consoles, under the owner's rule of 2026-11-02 that every
 default is the best picture. The PSG now falls silent with the screen when a film ends,
 stops or faults; before, the last note sounded on over the black or red
 screen. That change to `src/main.c` and `src/screen.c` has not run on a
-console yet. The next change to `src/replay.s`, the transfer loop or the
+console yet, and neither has the screen reset, palette and display writes
+moving from SMSlib to `src/vdp.s`. The next change to `src/replay.s`, the transfer loop or the
 overlay's VDP writes is unverified again until it runs on a console.
 
 Since that run the overlay became the family's menu, owner's instruction of

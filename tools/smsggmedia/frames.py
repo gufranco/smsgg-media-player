@@ -14,6 +14,7 @@ from smsggmedia import limits, pattern, smscolor
 
 CHANNELS: Final = smscolor.RGB_CHANNELS
 MAX_FRAMES: Final = math.ceil(limits.MAX_SOURCE_SECONDS * limits.NTSC_FIELD_HZ)
+SQUARE: Final = 1.0
 
 
 def decode(
@@ -27,6 +28,7 @@ def decode(
     scaler: str = limits.DEFAULT_SCALER,
     denoise: float = 0.0,
     bars: source_mod.Bars | None = None,
+    pixel_aspect: float = SQUARE,
 ) -> Iterator[npt.NDArray[np.uint8]]:
     _check_request(width=width, height=height, fps=fps, scaler=scaler)
     path = Path(source)
@@ -34,7 +36,15 @@ def decode(
         msg = f"no such source file: {path}"
         raise FileNotFoundError(msg)
 
-    stages = _stages(width=width, height=height, fps=fps, scaler=scaler, denoise=denoise, bars=bars)
+    stages = _stages(
+        width=width,
+        height=height,
+        fps=fps,
+        scaler=scaler,
+        denoise=denoise,
+        bars=bars,
+        pixel_aspect=pixel_aspect,
+    )
     command = ffmpeg.frame_command(path, start=start, duration=duration, stages=stages)
     yield from ffmpeg.stream_frames(
         command, path=path, shape=(height, width, CHANNELS), max_frames=MAX_FRAMES
@@ -49,6 +59,7 @@ def _stages(
     scaler: str,
     denoise: float,
     bars: source_mod.Bars | None,
+    pixel_aspect: float,
 ) -> list[str]:
     denoising = [f"hqdn3d={denoise}:{denoise}:{denoise * 2}:{denoise * 2}"] if denoise > 0.0 else []
     cropping = ["crop={}:{}:{}:{}".format(*bars)] if bars is not None else []
@@ -56,8 +67,20 @@ def _stages(
         *cropping,
         f"fps={fps}",
         *denoising,
-        f"scale={width}:{height}:flags={scaler}:force_original_aspect_ratio=increase",
-        f"crop={width}:{height}",
+        *_fill(width=width, height=height, scaler=scaler, pixel_aspect=pixel_aspect),
+    ]
+
+
+def _fill(*, width: int, height: int, scaler: str, pixel_aspect: float) -> list[str]:
+    if pixel_aspect == SQUARE:
+        return [
+            f"scale={width}:{height}:flags={scaler}:force_original_aspect_ratio=increase",
+            f"crop={width}:{height}",
+        ]
+    shown = width * pixel_aspect / height
+    return [
+        f"crop='min(iw,ih*{shown:.6f})':'min(ih,iw/{shown:.6f})'",
+        f"scale={width}:{height}:flags={scaler}",
     ]
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from smsggmedia import console, pattern
+from smsggmedia import console, limits, pattern, target
 
 
 class TestMemoryMap:
@@ -265,3 +265,25 @@ class TestTwoTables:
 
         # Assert
         assert str(refused.value) == "register 2 value 0x00 selects no table this player uses"
+
+
+class TestPixelAspect:
+    def test_a_master_system_pixel_is_eight_sevenths_as_wide_as_tall(self):
+        # Arrange
+        expected = 8 / 7
+
+        # Act
+        aspect = limits.PIXEL_ASPECT[target.MASTER_SYSTEM.name]
+
+        # Assert
+        assert aspect == pytest.approx(expected, rel=1e-6)
+
+    def test_a_game_gear_pixel_stays_square_without_a_source(self):
+        # Arrange
+        expected = 1.0
+
+        # Act
+        aspect = limits.PIXEL_ASPECT[target.GAME_GEAR.name]
+
+        # Assert
+        assert aspect == expected

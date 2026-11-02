@@ -228,7 +228,7 @@ class TestScreenResetDoesTheWork:
 
     def test_the_name_table_is_filled_with_the_idle_cell(self):
         # Arrange
-        call = "SMS_VRAMmemsetW(FMV_SCREEN_NAME_TABLE, FMV_SCREEN_IDLE_CELL"
+        call = "fmv_vdp_fill_words(FMV_SCREEN_NAME_TABLE, FMV_SCREEN_IDLE_CELL"
 
         # Act
         text = SCREEN_SOURCE.read_text()
@@ -238,7 +238,7 @@ class TestScreenResetDoesTheWork:
 
     def test_every_sprite_is_parked_off_screen(self):
         # Arrange
-        call = "SMS_VRAMmemset(FMV_SCREEN_SAT, FMV_SCREEN_SPRITE_OFF"
+        call = "fmv_vdp_fill_words(FMV_SCREEN_SAT, FMV_SCREEN_SPRITE_WORD"
 
         # Act
         text = SCREEN_SOURCE.read_text()
@@ -254,8 +254,11 @@ class TestScreenResetDoesTheWork:
         text = source.read_text()
 
         # Assert
-        assert "SMS_initSprites();" in text
-        assert "SMS_copySpritestoSAT();" in text
+        assert (
+            "fmv_vdp_fill_words(FMV_SCREEN_SAT, FMV_SCREEN_SPRITE_WORD, FMV_SCREEN_SPRITES / 2u);"
+            in text
+        )
+        assert "(FMV_SCREEN_SPRITE_OFF << 8) | FMV_SCREEN_SPRITE_OFF" in text
 
     def test_both_palette_zeros_are_pinned_black(self):
         # Arrange
@@ -276,7 +279,7 @@ class TestScreenResetDoesTheWork:
         offenders = [
             path.name
             for path in (ROOT / "src").glob("*.c")
-            if path.name not in allowed and "SMS_displayOff()" in path.read_text()
+            if path.name not in allowed and "fmv_vdp_display_off()" in path.read_text()
         ]
 
         # Assert
@@ -306,7 +309,11 @@ class TestTheEndOfAFilm:
 
         # Assert
         assert fault is not None
-        assert fault.group(1).strip() == "fmv_set_sprite_colour(0u, FMV_COLOUR_RED);"
+        assert fault.group(1).split() == [
+            "SMS_waitForVBlank();",
+            "fmv_set_sprite_colour(0u,",
+            "FMV_COLOUR_RED);",
+        ]
 
     def test_the_fault_colour_is_a_red_the_console_can_show(self):
         # Arrange

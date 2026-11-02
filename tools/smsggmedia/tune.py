@@ -127,6 +127,7 @@ def decode_windows(
                 scaler=footage.scaler,
                 denoise=denoise,
                 bars=footage.bars,
+                pixel_aspect=geometry.pixel_aspect,
             )
         )
         for window_start, window_duration in windows

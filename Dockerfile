@@ -34,7 +34,9 @@ RUN mkdir /opt/devkitSMS \
  && cc -O2 -o /usr/local/bin/folder2c /opt/devkitSMS/folder2c/src/folder2c.c \
  && install -m 0755 /opt/devkitSMS/assets2banks/src/assets2banks.py /usr/local/bin/assets2banks
 
-RUN make -C /opt/devkitSMS/crt0/src \
+RUN sed -i 's/^        out (c),l$/        out (c),l\n        nop\n        nop\n        nop\n        nop\n        nop/' /opt/devkitSMS/crt0/src/crt0_sms.s \
+ && test "$(sed -n '/out (c),l/,/out (c),h/p' /opt/devkitSMS/crt0/src/crt0_sms.s | grep -c nop)" -eq 5 \
+ && make -C /opt/devkitSMS/crt0/src \
  && make -C /opt/devkitSMS/SMSlib/src CONFIG="--sdcccall 1" \
  && install -m 0644 /opt/devkitSMS/SMSlib/src/SMSlib.lib /opt/devkitSMS/SMSlib/SMSlib.lib \
  && install -m 0644 /opt/devkitSMS/SMSlib/src/SMSlib_GG.lib /opt/devkitSMS/SMSlib/SMSlib_GG.lib \

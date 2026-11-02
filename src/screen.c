@@ -3,6 +3,10 @@
 #include "SMSlib.h"
 #include "fmv/console.h"
 #include "fmv/psg.h"
+#include "fmv/vdp.h"
+
+#define FMV_SCREEN_BLANK_WORD   0x0000u
+#define FMV_SCREEN_SPRITE_WORD  ((u16)((FMV_SCREEN_SPRITE_OFF << 8) | FMV_SCREEN_SPRITE_OFF))
 
 void fmv_screen_reset(void)
 {
@@ -12,22 +16,25 @@ void fmv_screen_reset(void)
                   "the idle cell points inside the reserved patterns");
     static_assert(FMV_SCREEN_BACK_TABLE + FMV_SCREEN_NAME_TABLE_BYTES <= FMV_SCREEN_NAME_TABLE,
                   "the back table ends before the front one");
+    static_assert(FMV_SCREEN_VRAM_BYTES % 2u == 0u && FMV_SCREEN_VRAM_BYTES > 0u,
+                  "VRAM clears in whole words");
+    static_assert(FMV_SCREEN_NAME_TABLE_BYTES % 2u == 0u && FMV_SCREEN_SPRITES % 2u == 0u,
+                  "the tables fill in whole words");
 
-    SMS_displayOff();
-    SMS_VRAMmemset(0x0000u, 0x00u, FMV_SCREEN_VRAM_BYTES);
-    SMS_VRAMmemsetW(FMV_SCREEN_NAME_TABLE, FMV_SCREEN_IDLE_CELL, FMV_SCREEN_NAME_TABLE_BYTES);
-    SMS_VRAMmemsetW(FMV_SCREEN_BACK_TABLE, FMV_SCREEN_IDLE_CELL, FMV_SCREEN_NAME_TABLE_BYTES);
+    fmv_vdp_display_off();
+    fmv_vdp_fill_words(0x0000u, FMV_SCREEN_BLANK_WORD, FMV_SCREEN_VRAM_BYTES / 2u);
+    fmv_vdp_fill_words(FMV_SCREEN_NAME_TABLE, FMV_SCREEN_IDLE_CELL, FMV_SCREEN_NAME_TABLE_BYTES / 2u);
+    fmv_vdp_fill_words(FMV_SCREEN_BACK_TABLE, FMV_SCREEN_IDLE_CELL, FMV_SCREEN_NAME_TABLE_BYTES / 2u);
     fmv_screen_table(FMV_SCREEN_FRONT_REGISTER);
-    SMS_VRAMmemset(FMV_SCREEN_SAT, FMV_SCREEN_SPRITE_OFF, FMV_SCREEN_SPRITES);
-    SMS_initSprites();
-    SMS_copySpritestoSAT();
+    fmv_vdp_fill_words(FMV_SCREEN_SAT, FMV_SCREEN_SPRITE_WORD, FMV_SCREEN_SPRITES / 2u);
     fmv_set_bg_colour(0u, FMV_COLOUR_BLACK);
     fmv_set_sprite_colour(0u, FMV_COLOUR_BLACK);
-    SMS_displayOn();
+    fmv_vdp_display_on();
 }
 
 void fmv_screen_fault(void)
 {
+    SMS_waitForVBlank();
     fmv_set_sprite_colour(0u, FMV_COLOUR_RED);
 }
 

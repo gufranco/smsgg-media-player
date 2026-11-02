@@ -174,6 +174,7 @@ def decode_source(args: argparse.Namespace, played: Played, screen: Screen) -> n
                 start=args.start,
                 duration=seconds,
                 scaler=limits.DEFAULT_SCALER,
+                pixel_aspect=limits.PIXEL_ASPECT[args.target],
             )
         )
     )

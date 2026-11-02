@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from fmvcore import video
 
 from smsggmedia import bake, preview, stream
 
@@ -141,6 +142,22 @@ class TestPreviewVideo:
         # Arrange
         blob, _ = baked_film(4)
         path = tmp_path / "preview.mp4"
+        fields = preview.field_count(blob)
+
+        # Act
+        preview.write_video(path, blob=blob, geometry=GEOMETRY)
+
+        # Assert
+        factor = video.enlargement(
+            video.Picture(width=GEOMETRY.width, height=GEOMETRY.height, rate=preview.FIELD_RATE)
+        )
+        assert video_shape(path) == (GEOMETRY.width * factor, GEOMETRY.height * factor, fields)
+
+    @pytest.mark.ffmpeg
+    def test_a_matroska_preview_keeps_the_console_size(self, tmp_path):
+        # Arrange
+        blob, _ = baked_film(4)
+        path = tmp_path / "preview.mkv"
         fields = preview.field_count(blob)
 
         # Act

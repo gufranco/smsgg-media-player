@@ -39,6 +39,7 @@ class Geometry:
     rows: int
     top_row: int
     left_column: int = 0
+    pixel_aspect: float = 1.0
 
     def __post_init__(self) -> None:
         if (

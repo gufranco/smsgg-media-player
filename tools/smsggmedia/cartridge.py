@@ -72,10 +72,16 @@ def shortfall(*, banks: int, max_banks: int, seconds: float) -> str:
     )
 
 
-def geometry_for(columns: int, rows: int) -> bake.Geometry:
+def geometry_for(columns: int, rows: int, *, pixel_aspect: float = 1.0) -> bake.Geometry:
     top = (bake.VISIBLE_ROWS - rows) // 2
     left = (bake.NAME_TABLE_COLUMNS - columns) // 2
-    return bake.Geometry(columns=columns, rows=rows, top_row=max(top, 0), left_column=max(left, 0))
+    return bake.Geometry(
+        columns=columns,
+        rows=rows,
+        top_row=max(top, 0),
+        left_column=max(left, 0),
+        pixel_aspect=pixel_aspect,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,6 +250,7 @@ def _decode(
             scaler=args.scaler,
             denoise=settled.denoise,
             bars=args.bars,
+            pixel_aspect=geometry.pixel_aspect,
         )
     )
 
@@ -304,7 +311,9 @@ def _build_cartridge(system: target.Target) -> int:
 def bake_cartridge(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     show_dial_reports()
     info = ffmpeg.probe(args.source)
-    geometry = geometry_for(*flags.picture_size(args))
+    geometry = geometry_for(
+        *flags.picture_size(args), pixel_aspect=limits.PIXEL_ASPECT[args.target.name]
+    )
     _describe_source(args.source, info=info, geometry=geometry)
     _announce_silence(args)
     _announce_menu(args)

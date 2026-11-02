@@ -31,6 +31,8 @@ LAST_UNREPEATED_LINE = 0xDA
 REPEATED_LINES = 6
 VRAM_WRITE = 1
 CRAM_WRITE = 3
+REGISTER_WRITE = 2
+REGISTER_MASK = 0x0F
 SPRITE_PATTERNS = 0x2000
 TILE_BYTES = 32
 SAT_Y = 0x3F00
@@ -103,6 +105,10 @@ class Vdp:
         self.writes = 0
         self.pans: list[int] = []
         self.sounds: list[int] = []
+        self.timer: core.Cpu | None = None
+        self.stamps: list[int] = []
+        self.registers: list[tuple[int, int]] = []
+        self.cram_writes: list[tuple[int, int]] = []
 
     def start_at(self, line: int) -> None:
         self.line = line
@@ -121,6 +127,8 @@ class Vdp:
 
     def write(self, address: int, value: int) -> None:
         port = address & 0xFF
+        if port in (CONTROL_PORT, DATA_PORT) and self.timer is not None:
+            self.stamps = [*self.stamps, self.timer.cycles]
         if port == CONTROL_PORT:
             self._control(value)
         elif port == DATA_PORT:
@@ -136,6 +144,8 @@ class Vdp:
             return
         self.address = ((value & 0x3F) << 8) | self.latch
         self.code = value >> 6
+        if self.code == REGISTER_WRITE:
+            self.registers = [*self.registers, (value & REGISTER_MASK, self.latch)]
         self.latch = None
 
     def _data(self, value: int) -> None:
@@ -147,6 +157,7 @@ class Vdp:
         self.address += 1
 
     def _cram(self, value: int) -> None:
+        self.cram_writes = [*self.cram_writes, (self.address, value)]
         if not self.gg:
             self.cram[self.address % CRAM_BYTES] = value
             return
@@ -177,6 +188,7 @@ def call(
     memory = Memory(image=bytes(image))
     cpu = Cpu("z80", memory, ports=vdp)
     cpu.reset()
+    vdp.timer = cpu
     cpu.registers.pc = names[routine]
     cpu.registers.sp = STACK
     cpu.registers.hl = WHERE
