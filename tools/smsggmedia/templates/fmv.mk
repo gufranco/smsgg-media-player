@@ -6,7 +6,7 @@ include $(FMV_DIR)/target.mk
 FMV_TARGET_FLAGS := $(if $(filter gg,$(FMV_TARGET)),-DTARGET_GG)
 FMV_SMSLIB_LIB := $(if $(filter gg,$(FMV_TARGET)),SMSlib_GG.lib,SMSlib.lib)
 FMV_C_SOURCES := mediaplayer screen assert seek
-FMV_ASM_SOURCES := replay psg vdp
+FMV_ASM_SOURCES := replay psg vdp vdpcopy
 FMV_OBJECTS := $(FMV_C_SOURCES:%=$(FMV_BUILD)/%.rel) $(FMV_ASM_SOURCES:%=$(FMV_BUILD)/%.rel)
 FMV_ASSETS := $(FMV_BUILD)/assets
 FMV_ASSET_HDR := $(FMV_ASSETS)/assets.h

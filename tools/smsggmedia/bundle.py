@@ -15,6 +15,7 @@ LIBRARY_SOURCES: Final = (
     "replay.s",
     "psg.s",
     "vdp.s",
+    "vdpcopy.s",
     "mediaplayer.c",
     "screen.c",
     "assert.c",
@@ -28,6 +29,8 @@ LIBRARY_HEADERS: Final = (
     "screen.h",
     "assert.h",
     "console.h",
+    "vdp.h",
+    "vdpcopy.h",
 )
 MAKEFILE: Final = "fmv.mk"
 TARGET_FILES: Final = ("target.inc", "fmv_target.h")

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from fmvcore.testing import seeded
 
@@ -146,6 +148,63 @@ class TestTheTarget:
         # Assert
         text = guide.read_text()
         assert ("# A film for your Game Gear game" in text, "SMSlib_GG.lib" in text) == (True, True)
+
+
+FMV_INCLUDE = re.compile(r'#include "(fmv/[^"]+)"')
+DECLARED = re.compile(r"^[A-Za-z_][\w \*]*\b(fmv_\w+)\([^;{]*\);$", re.MULTILINE)
+DEFINED = re.compile(r"^_(fmv_\w+)::|^[A-Za-z_][\w \*]*\b(fmv_\w+)\([^;]*\)\s*$", re.MULTILINE)
+MAKE_LIST = re.compile(r"^(FMV_C_SOURCES|FMV_ASM_SOURCES) := (.*)$", re.MULTILINE)
+
+
+class TestSelfContained:
+    @pytest.mark.parametrize("system", [target.MASTER_SYSTEM, target.GAME_GEAR])
+    def test_every_player_header_the_bundle_includes_is_in_the_bundle(self, tmp_path, film, system):
+        # Arrange
+        assets, generated, _ = film
+        where = tmp_path / "bundle"
+
+        # Act
+        bundle.write(
+            target=where, assets=assets, generated=generated, figures=figures(), system=system
+        )
+
+        # Assert
+        texts = [path.read_text() for path in where.rglob("*") if path.suffix in {".c", ".h"}]
+        wanted = {name for text in texts for name in FMV_INCLUDE.findall(text)}
+        assert sorted(name for name in wanted if not (where / "include" / name).is_file()) == []
+
+    def test_every_function_a_bundled_header_declares_has_a_bundled_body(self, tmp_path, film):
+        # Arrange
+        assets, generated, _ = film
+        where = tmp_path / "bundle"
+
+        # Act
+        bundle.write(target=where, assets=assets, generated=generated, figures=figures())
+
+        # Assert
+        headers = [path.read_text() for path in where.rglob("*.h")]
+        declared = {name for text in headers for name in DECLARED.findall(text)}
+        sources = [path.read_text() for path in (where / "src").iterdir()]
+        defined = {label or c for text in sources for label, c in DEFINED.findall(text)}
+        assert sorted(declared - defined) == []
+
+    def test_the_fragment_builds_every_source_the_bundle_carries(self, tmp_path, film):
+        # Arrange
+        assets, generated, _ = film
+        where = tmp_path / "bundle"
+
+        # Act
+        bundle.write(target=where, assets=assets, generated=generated, figures=figures())
+
+        # Assert
+        lists = dict(MAKE_LIST.findall((where / bundle.MAKEFILE).read_text()))
+        built = sorted(
+            [
+                *(f"{name}.c" for name in lists["FMV_C_SOURCES"].split()),
+                *(f"{name}.s" for name in lists["FMV_ASM_SOURCES"].split()),
+            ]
+        )
+        assert built == sorted(bundle.LIBRARY_SOURCES)
 
 
 class TestVersion:
