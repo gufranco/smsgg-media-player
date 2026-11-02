@@ -245,6 +245,58 @@ class TestTheReport:
         assert "nothing" in str(refused.value)
 
 
+STAND_IN = """#!/bin/sh
+eval script=\\${$#}
+out=$(sed -n 's/.*io.open("\\(.*\\)", "w").*/\\1/p' "$script")
+printf '%s %s\\n' "$1" "$SDL_VIDEODRIVER" > "$CALLS"
+printf '5 191 96 200 4660 0 0\\n5 191 129 200 4660 0 20000000000000\\n' > "$out"
+"""
+
+
+@pytest.fixture
+def stand_in_mame(tmp_path, monkeypatch) -> Path:
+    folder = tmp_path / "bin"
+    folder.mkdir()
+    program = folder / "mame"
+    program.write_text(STAND_IN)
+    program.chmod(0o755)
+    calls = tmp_path / "calls.txt"
+    monkeypatch.setenv("PATH", f"{folder}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("CALLS", str(calls))
+    return calls
+
+
+class TestTheMameRun:
+    def test_a_game_gear_rom_runs_headless_under_its_own_driver(
+        self, tracer, tmp_path, stand_in_mame
+    ):
+        # Arrange
+        rom = tmp_path / "film.gg"
+        rom.write_bytes(bytes(16))
+
+        # Act
+        records = tracer.trace(rom, frames=2, out=tmp_path / "gg.trace", system="gg")
+
+        # Assert
+        assert (len(records), stand_in_mame.read_text()) == (2, "gamegear dummy\n")
+
+    def test_the_command_line_reports_a_clean_trace(self, tracer, tmp_path, stand_in_mame, capsys):
+        # Arrange
+        rom = tmp_path / "film.sms"
+        rom.write_bytes(bytes(16))
+        argv = [str(rom), "--frames", "2", "--out", str(tmp_path / "cli.trace")]
+
+        # Act
+        code = tracer.main(argv)
+
+        # Assert
+        assert (code, "PASS" in capsys.readouterr().out, stand_in_mame.read_text()) == (
+            0,
+            True,
+            "sg1000m3 dummy\n",
+        )
+
+
 def mame_or_skip(rom: Path) -> None:
     reason = ""
     if shutil.which("mame") is None:
