@@ -189,3 +189,48 @@ class TestReuseOnEachLattice:
 
         # Assert
         assert guards == [0.0, 0.5]
+
+
+class TestPaletteChoicesOnEachLattice:
+    def test_only_the_master_system_chooses_a_palette_by_its_blurred_picture(self):
+        # Arrange
+        consoles = (SMS, GG)
+
+        # Act
+        chosen = [console.palette_by_blur for console in consoles]
+
+        # Assert
+        assert chosen == [True, False]
+
+    def test_only_the_game_gear_migrates_palette_entries(self):
+        # Arrange
+        consoles = (SMS, GG)
+
+        # Act
+        migrating = [console.migrate_entries for console in consoles]
+
+        # Assert
+        assert migrating == [False, True]
+
+
+class TestLinearLight:
+    def test_black_and_white_are_no_light_and_full_light(self):
+        # Arrange
+        white = GG.pack(np.array([GG.top, GG.top, GG.top], dtype=np.uint8))
+
+        # Act
+        light = GG.light()
+
+        # Assert
+        assert light[0].tolist() == [0.0, 0.0, 0.0]
+        assert light[int(white)].tolist() == [1.0, 1.0, 1.0]
+
+    def test_the_master_system_third_level_gives_the_srgb_light_of_170(self):
+        # Arrange
+        level = SMS.pack(np.array([2, 0, 0], dtype=np.uint8))
+
+        # Act
+        red = SMS.light()[int(level)][0]
+
+        # Assert
+        assert red == pytest.approx(0.40198, abs=1e-5)

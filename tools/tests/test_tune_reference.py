@@ -138,7 +138,9 @@ class TestDenoiseAgainstAReference:
             for value, score in choice.scores.items()
             if score.blurred <= floor * (1.0 + tune.SCORE_TIE)
         ]
-        assert choice.value == min(tied, key=lambda value: choice.scores[value].per_frame)
+        assert choice.value == min(
+            tied, key=lambda value: (choice.scores[value].per_frame, choice.scores[value].blurred)
+        )
 
 
 class TestAWaivedStaleGate:

@@ -30,6 +30,8 @@ _BAYER: Final = (_BAYER_ORDER + 0.5) / _BAYER_ORDER.size - 0.5
 class Lattice:
     levels: int
     dither_by_light: bool = False
+    palette_by_blur: bool = False
+    migrate_entries: bool = False
 
     def __post_init__(self) -> None:
         if self.levels < MIN_LEVELS or BYTE_MAX % (self.levels - 1):
@@ -87,6 +89,9 @@ class Lattice:
 
     def oklab(self, chroma_weight: float = 1.0) -> npt.NDArray[np.float32]:
         return _oklab_table(self.levels, chroma_weight)
+
+    def light(self) -> npt.NDArray[np.float64]:
+        return _light_table(self.levels)
 
     def cram_bytes(self, entries: npt.NDArray[np.integer]) -> bytes:
         if self.wide:
@@ -159,6 +164,15 @@ def _light_share(
 
 
 @cache
+def _light_table(levels: int) -> npt.NDArray[np.float64]:
+    space = Lattice(levels)
+    rgb = space.to_rgb(np.arange(space.count, dtype=np.uint16)).astype(np.float64) / BYTE_MAX
+    light = colour.srgb_to_linear(rgb)
+    light.flags.writeable = False
+    return light
+
+
+@cache
 def _oklab_table(levels: int, chroma_weight: float) -> npt.NDArray[np.float32]:
     if chroma_weight < 0.0:
         msg = "chroma weight must not be negative"
@@ -172,8 +186,10 @@ def _oklab_table(levels: int, chroma_weight: float) -> npt.NDArray[np.float32]:
     return lab
 
 
-MASTER_SYSTEM: Final = Lattice(target.MASTER_SYSTEM.channel_levels, dither_by_light=True)
-GAME_GEAR: Final = Lattice(target.GAME_GEAR.channel_levels)
+MASTER_SYSTEM: Final = Lattice(
+    target.MASTER_SYSTEM.channel_levels, dither_by_light=True, palette_by_blur=True
+)
+GAME_GEAR: Final = Lattice(target.GAME_GEAR.channel_levels, migrate_entries=True)
 _BY_TARGET: Final = {target.MASTER_SYSTEM.name: MASTER_SYSTEM, target.GAME_GEAR.name: GAME_GEAR}
 
 

@@ -461,6 +461,10 @@ no remaining caller has since been deleted; the measurement is the record.
 - **pngquant choosing the two palettes**: Worse than the fitted palettes on all 59 frames of both openings, blurred error 0.0287 against 0.0154 on the cartoon and 0.0266 against 0.0201 on game footage. It optimises one free palette per image, then has to be snapped to the 64 colours
 - **ImageMagick Floyd-Steinberg onto the 64 colours**: Wins on a still frame of game footage, 0.0151 against 0.0169, and loses in a bake: 0.0337 against 0.0262 on the cartoon, 0.0353 against 0.0258 on game footage, and 19 banks against 12. The pattern moves every frame, so tiles stop repeating and merging rises
 - **Seeding and choosing merged tiles by how many cells use them**: Mixed. Fewer merged cells on game footage, but worse on the cartoon, 16 badly-off cells against 8, and no better at the fade the change was aimed at
+- **Choosing a cell's palette by the summed error of the pixels it draws**: Mean 0.7% worse, Hong Kong 4.7%. A per-pixel sum counts every dithered pixel as loss; the blurred choice under Kept is what works
+- **Matching a fresh palette's entries to the previous palette's across a refit**: Sintel 17% better on both consoles, Hong Kong 8 to 12% worse with the reuse dial searched on both. It works only through resident reuse, which helps a fade and costs a busy scene
+- **Knoll's pattern dither between palette entries**: Four or sixteen picks, the error added up in Oklab or in linear light: every form lost or split against the two-entry mix on both consoles, Hong Kong 6 to 15% worse, at two to four times the bake time
+- **Entry migration on the Master System**: 0% to 5% worse. Its 64 colours rarely give a palette more colours than slots, so there is nothing to move
 
 ### Kept
 
@@ -475,6 +479,10 @@ no remaining caller has since been deleted; the measurement is the record.
 - **Picking reuse on the 90th percentile of per-frame error**: The mean let a threshold win that smeared the one frame at a cut; the cartoon's worst frame went from 0.0412 back to 0.0297
 - **Scoring denoise on the replayed picture against an undenoised reference, and breaking near-ties toward the cheaper setting**: Palette carry-over had let both searches drift to settings that won by 1 to 2% and merged twice as many cells. On the cartoon the worst frame went from 0.0420 back to 0.0303 and badly-off cells from 142 to 8; on game footage the corrupted HUD at the end of the fade is gone
 - **Merging tiles on a blurred view of each cell**: 0.0412 to 0.0394 blurred error on game footage for one bank in 39, cartoon level. With dithering two tiles that look alike can differ in most pixels, so a per-pixel distance merged a dither into the wrong tile
+- **Choosing a cell's palette by its blurred picture, on the Master System**: Each cell takes the palette whose drawn pixels, blurred on linear light, sit closest to the blurred source. Sintel 17% and Hong Kong 13% lower, and the white dither dots across dark walls are gone. The Game Gear tied and keeps nearest-entry error
+- **The second palette ordered to match the first**: A tile drawn through the other palette keeps near colours, so residents stand in across palettes. Sintel 13% lower on the Master System, the worst clip on either console 0.12% higher
+- **Entry migration on the Game Gear**: The palette entry that costs least to lose moves to the group with the most error, the utility migration of enhanced LBG. 0.2% to 5.0% lower on all six clips, and fewer grey blocks in the dance crowd
+- **The three together, against the code before them**: Master System Sintel 37% and Hong Kong 8% lower, popeye 1.3% higher; Game Gear 0.8% to 3.4% lower on every clip. Bakes take 20% longer on the Master System and 72% longer on the Game Gear
 
 Denoise is measured rather than fixed because the right strength is a property
 of the footage. Three fifteen-second windows of one film preferred three

@@ -534,6 +534,54 @@ particular entries cover its pixels. Alternating assignment and refitting
 is Lloyd's algorithm over the two palettes, and it is where most of the
 per-cell error can actually be recovered.
 
+#### Choosing a cell's palette on the Master System
+
+`Lattice.palette_by_blur` makes `_Mapping` hand each cell the palette whose
+drawn pixels, blurred on linear light with `fmvcore.colour.blurred_oklab`,
+sit closest to the blurred source cell. Nearest-entry error ignores what
+the dither draws, and summing the error of the pixels actually drawn is
+worse still, mean 0.7% and Hong Kong 4.7%, because it counts every
+dithered pixel as loss. Blurred, it cut the Master System's Sintel window
+by 17% and Hong Kong by 13%, and the sheet lost a lattice of white dither
+dots across dark walls. The Game Gear tied, -0.8% to +2.4%, with sheets
+that could not be told apart, so it keeps nearest-entry error. The keep
+decision in `fit_or_keep` still compares nearest-entry error, the number
+`PALETTE_KEEP_MARGIN` was swept on.
+
+#### `_paired`
+
+Order the second palette's free entries to match the first's, by least
+total distance, through `matching`, a pairwise swap search run a fixed four
+passes. A resident tile is stored as indices and drawn through whichever
+palette its new cell takes, so with matched order a tile uploaded for one
+palette stands in for a cell of the other with near colours. The backdrop
+entry and the menu's four never move. Worst clip +0.12%, Master System
+Sintel -13% and Hong Kong -2.1%, the Game Gear -0.6% to +0.1%.
+
+Matching each fresh table to the previous one across a refit was measured
+too, and rejected: Sintel improved 17% on both consoles and Hong Kong lost
+8 to 12%, with the reuse dial searched on both trees. It acts only through
+resident reuse, which helps a fade and costs a busy static scene.
+
+#### `migrated`
+
+`Lattice.migrate_entries` lets `choose_entries` move its weakest medoid,
+the one whose cluster loses least if it goes, into the cluster with the
+largest error, up to ten rounds, keeping a round only when the total
+falls. It is the utility migration of enhanced LBG. On the Game Gear,
+whose groups hold far more colours than 16 slots, it lowered error on all
+six clips, 0.2% to 5.0%, and the dance sheet lost its grey blocks in the
+crowd; on the Master System, whose 64 colours rarely overflow a palette,
+it measured 0% to +5%, so only the Game Gear uses it.
+
+Across the regression set the three together move the Master System from
+0.0199 to 0.0587 blurred error to 0.0202 to 0.0377, Sintel -37% and
+Hong Kong -8%, with popeye +1.3% the worst clip, and the Game Gear 0.8% to
+3.4% lower on every clip. Timed back to back on the same machine, the
+six clips bake in 20% more time on the Master System and 72% more on the
+Game Gear, where the migration refines medoids again each round; the
+picture outranks bake time, so that is the trade taken.
+
 ### [`smsggmedia/pattern.py`](smsggmedia/pattern.py)
 
 Pack 8x8 four-bit tiles into the VDP's pattern format, and build name

@@ -147,7 +147,22 @@ CRT returns: no composite model and no `--gamut-dither`.
   than 30%, `limits.PALETTE_KEEP_MARGIN`. A resident tile is stored as palette indices,
   so a refit re-colours every tile already on the console. The margin was
   swept from 0.02 to 1.5 on the cartoon and the game footage, and 0.3 was best
-  on game footage; the README has the numbers.
+  on game footage; the README has the numbers. The keep decision compares
+  nearest-entry error, the number the margin was swept on, whatever decides
+  each cell's palette.
+- On the Master System a cell takes the palette whose drawn pixels, blurred on
+  linear light, sit closest to the blurred source, `Lattice.palette_by_blur`;
+  the Game Gear tied and keeps nearest-entry error. A sum of per-pixel error
+  over the drawn pixels is the wrong judge here for the reason above: it
+  scores every dithered pixel as loss.
+- The second palette's free entries are ordered to match the first's,
+  `palettes._paired`, so a resident tile drawn through the other palette
+  keeps near colours. Ordering a fresh table to match the previous one
+  across a refit was measured and rejected: it helps a fade and costs a busy
+  scene.
+- On the Game Gear `choose_entries` migrates its weakest medoid to the
+  cluster with the most error, `Lattice.migrate_entries`. The Master System's
+  groups rarely hold more colours than slots, and it measured worse there.
 - A mednafen capture matches the replay oracle pixel for pixel, so it is the
   view to judge by, at integer scale.
 - The reuse threshold is read in Master System terms and scaled per console,

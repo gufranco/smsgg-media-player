@@ -5,7 +5,7 @@ from typing import Final
 
 import numpy as np
 import numpy.typing as npt
-from fmvcore import dither
+from fmvcore import colour, dither
 
 from smsggmedia import lattice, pattern, smscolor
 from smsggmedia import menu as menus
@@ -14,6 +14,9 @@ LLOYD_ROUNDS: Final = 8
 ASSIGN_ROUNDS: Final = 6
 FEWEST_TO_SPLIT: Final = 2
 TILE_PIXELS: Final = pattern.TILE_PX * pattern.TILE_PX
+MIGRATION_ROUNDS: Final = 10
+MIGRATION_FACTOR: Final = 0.5
+MATCHING_PASSES: Final = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +48,8 @@ def choose_entries(
     counts: npt.NDArray[np.integer],
     lab: npt.NDArray[np.float32],
     slots: int,
+    *,
+    migrate: bool = False,
 ) -> npt.NDArray[np.uint16]:
     if slots < 1:
         msg = "a palette needs at least one entry"
@@ -56,7 +61,41 @@ def choose_entries(
     weight = counts.astype(np.float64)
     seeds = _seed_centres(points, weight, count=min(slots, present.size))
     centres = _refine_centres(points, weight, seeds)
+    if migrate and centres.size >= FEWEST_TO_SPLIT:
+        centres = migrated(points, weight, centres)
     return _padded(present[centres].astype(np.uint16), slots)
+
+
+def _medoid_costs(
+    points: npt.NDArray[np.float32], weight: npt.NDArray[np.float64], centres: npt.NDArray[np.intp]
+) -> tuple[npt.NDArray[np.intp], npt.NDArray[np.float64], npt.NDArray[np.float64], float]:
+    distance = _squared_matrix(points, points[centres])
+    nearest = np.argmin(distance, axis=1)
+    near = distance[np.arange(points.shape[0]), nearest]
+    second = np.partition(distance, 1, axis=1)[:, 1]
+    cost = np.bincount(nearest, weights=weight * near, minlength=centres.size)
+    removal = np.bincount(nearest, weights=weight * (second - near), minlength=centres.size)
+    return nearest, cost, removal, float((weight * near).sum())
+
+
+def migrated(
+    points: npt.NDArray[np.float32], weight: npt.NDArray[np.float64], centres: npt.NDArray[np.intp]
+) -> npt.NDArray[np.intp]:
+    best = centres
+    for _ in range(MIGRATION_ROUNDS):
+        nearest, cost, removal, total = _medoid_costs(points, weight, best)
+        worst, weakest = int(np.argmax(cost)), int(np.argmin(removal))
+        if worst == weakest or removal[weakest] >= MIGRATION_FACTOR * cost[worst]:
+            break
+        members = np.flatnonzero(nearest == worst)
+        spread = weight[members] * _squared(points[members], points[best[worst]])
+        trial = best.copy()
+        trial[weakest] = members[int(np.argmax(spread))]
+        trial = _refine_centres(points, weight, trial)
+        if _medoid_costs(points, weight, trial)[3] >= total:
+            break
+        best = trial
+    return best
 
 
 def _seed_centres(
@@ -128,6 +167,7 @@ def fit_or_keep(
         space=space,
         columns=frame.shape[1] // pattern.TILE_PX,
         strength=ordered_dither,
+        source=_blurred_source(frame),
     )
     fresh, fresh_error = mapping.quantise(_fit(cells, lab, space, menu=menu))
     if previous is None:
@@ -163,7 +203,30 @@ def _fit(
             break
         group = moved
         table = _fit_tables(cells, group, lab, space, menu=menu)
-    return table
+    return _paired(table, lab, menu=menu)
+
+
+def _paired(
+    table: npt.NDArray[np.uint16], lab: npt.NDArray[np.float32], *, menu: bool
+) -> npt.NDArray[np.uint16]:
+    last = menus.FILM_ENTRIES if menu else smscolor.PALETTE_ENTRIES
+    free = np.arange(BACKDROP_ENTRY + 1, last)
+    cost = _squared_matrix(lab[table[1][free]], lab[table[0][free]])
+    result = table.copy()
+    result[1][free] = table[1][free][matching(cost)]
+    return result
+
+
+def matching(cost: npt.NDArray[np.float64]) -> npt.NDArray[np.intp]:
+    order = np.arange(cost.shape[0])
+    for _ in range(MATCHING_PASSES):
+        for first in range(order.size):
+            for second in range(first + 1, order.size):
+                kept = cost[order[first], first] + cost[order[second], second]
+                swapped = cost[order[second], first] + cost[order[first], second]
+                if swapped < kept:
+                    order[[first, second]] = order[[second, first]]
+    return order
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,11 +236,13 @@ class _Mapping:
     space: lattice.Lattice
     columns: int
     strength: float
+    source: npt.NDArray[np.float32]
 
     def quantise(self, table: npt.NDArray[np.uint16]) -> tuple[FramePalettes, float]:
         count = self.pixels.shape[0]
         best_index = np.zeros((smscolor.PALETTE_COUNT, count, TILE_PIXELS), dtype=np.uint8)
         best_error = np.zeros((smscolor.PALETTE_COUNT, count), dtype=np.float64)
+        judged = np.zeros((smscolor.PALETTE_COUNT, count), dtype=np.float64)
         threshold = dither.bayer_thresholds(pattern.TILE_PX).reshape(-1)
         for index in range(smscolor.PALETTE_COUNT):
             entries = self.lab[table[index]]
@@ -186,7 +251,9 @@ class _Mapping:
             nearest, runner, share = dither.two_nearest(distance, spacing, self.strength)
             best_index[index] = dither.mix(nearest, runner, share, threshold)
             best_error[index] = distance.min(axis=2).sum(axis=1)
-        choice = np.argmin(best_error, axis=0).astype(np.uint8)
+            judged[index] = self._judged(table[index][best_index[index]])
+        decided = judged if self.space.palette_by_blur else best_error
+        choice = np.argmin(decided, axis=0).astype(np.uint8)
         indices = np.take_along_axis(best_index, choice[None, :, None], axis=0)[0]
         fitted = FramePalettes(
             cram=table.reshape(-1).astype(np.uint16),
@@ -197,6 +264,21 @@ class _Mapping:
             lattice=self.space,
         )
         return fitted, float(best_error.min(axis=0).sum())
+
+    def _judged(self, drawn: npt.NDArray[np.uint16]) -> npt.NDArray[np.float64]:
+        if not self.space.palette_by_blur:
+            return np.zeros(drawn.shape[0], dtype=np.float64)
+        light = self.space.light()[drawn].reshape(-1, pattern.TILE_PX, pattern.TILE_PX, 3)
+        shown = colour.blurred_oklab(light).reshape(self.source.shape).astype(np.float64)
+        return np.sqrt(((shown - self.source) ** 2).sum(axis=-1)).sum(axis=1)
+
+
+def _blurred_source(frame: npt.NDArray[np.uint8]) -> npt.NDArray[np.float32]:
+    light = colour.srgb_to_linear(frame.astype(np.float64) / lattice.BYTE_MAX)
+    rows, columns = frame.shape[0] // pattern.TILE_PX, frame.shape[1] // pattern.TILE_PX
+    grid = light.reshape(rows, pattern.TILE_PX, columns, pattern.TILE_PX, smscolor.RGB_CHANNELS)
+    cells = grid.transpose(0, 2, 1, 3, 4).reshape(-1, pattern.TILE_PX, pattern.TILE_PX, 3)
+    return colour.blurred_oklab(cells).reshape(cells.shape[0], TILE_PIXELS, 3)
 
 
 def _squared(
@@ -263,7 +345,9 @@ def _fit_tables(
         present, counts = np.unique(members.reshape(-1), return_counts=True)
         kept = menu and index == menus.MENU_PALETTE
         slots = menus.FILM_ENTRIES if kept else smscolor.PALETTE_ENTRIES
-        table[index][:slots] = choose_entries(present, counts, lab, slots)
+        table[index][:slots] = choose_entries(
+            present, counts, lab, slots, migrate=space.migrate_entries
+        )
     if menu:
         table[menus.MENU_PALETTE][menus.FILM_ENTRIES :] = menus.colours(space)
     table[1][BACKDROP_ENTRY] = BACKDROP_COLOUR

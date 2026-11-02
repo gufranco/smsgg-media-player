@@ -1,7 +1,11 @@
+import dataclasses
+
 import numpy as np
 import pytest
+from fmvcore.colour import blurred_error
 
 from smsggmedia import lattice, palettes, pattern, smscolor
+from smsggmedia import menu as menus
 
 
 def fresh_fit(frame, **options):
@@ -352,6 +356,150 @@ class TestKeepingPalettes:
 
         # Assert
         assert str(raised.value) == "a palette keep margin must not be negative, got -0.1"
+
+
+PAIRING_SEED = 11
+BLOB_RADIUS = 0.01
+
+
+def varied_frame(seed: int) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    frame = rng.integers(0, 256, (32, 64, 3), dtype=np.uint8)
+    frame[:, 32:] = frame[:, 32:] // 2
+    return frame
+
+
+def second_palette_cost(table: np.ndarray, lab: np.ndarray, *, menu: bool = False) -> np.ndarray:
+    last = menus.FILM_ENTRIES if menu else smscolor.PALETTE_ENTRIES
+    first = lab[table[0][1:last]]
+    second = lab[table[1][1:last]]
+    return ((second[:, None, :] - first[None, :, :]) ** 2).sum(axis=-1)
+
+
+def improving_swaps(cost: np.ndarray) -> int:
+    size = cost.shape[0]
+    return sum(
+        cost[b, a] + cost[a, b] < cost[a, a] + cost[b, b]
+        for a in range(size)
+        for b in range(a + 1, size)
+    )
+
+
+class TestPairedPalettes:
+    def test_no_swap_of_two_second_palette_entries_brings_it_closer_to_the_first(self):
+        # Arrange
+        frame = varied_frame(PAIRING_SEED)
+
+        # Act
+        fitted = fresh_fit(frame)
+
+        # Assert
+        table = fitted.cram.reshape(smscolor.PALETTE_COUNT, smscolor.PALETTE_ENTRIES)
+        assert improving_swaps(second_palette_cost(table, lattice.MASTER_SYSTEM.oklab())) == 0
+
+    def test_the_backdrop_and_the_menu_entries_never_move(self):
+        # Arrange
+        frame = varied_frame(PAIRING_SEED)
+
+        # Act
+        fitted = fresh_fit(frame, menu=True)
+
+        # Assert
+        table = fitted.cram.reshape(smscolor.PALETTE_COUNT, smscolor.PALETTE_ENTRIES)
+        assert int(table[1][palettes.BACKDROP_ENTRY]) == palettes.BACKDROP_COLOUR
+        expected = menus.colours(lattice.MASTER_SYSTEM).tolist()
+        assert table[menus.MENU_PALETTE][menus.FILM_ENTRIES :].tolist() == expected
+
+    def test_matching_undoes_a_reversed_order(self):
+        # Arrange
+        wanted = np.array([0.1, 0.5, 0.2, 0.9, 0.3])
+        fresh = wanted[::-1]
+        cost = (fresh[:, None] - wanted[None, :]) ** 2
+
+        # Act
+        order = palettes.matching(cost)
+
+        # Assert
+        assert fresh[order].tolist() == wanted.tolist()
+
+
+def crowded_blob() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    blob = np.random.default_rng(PAIRING_SEED).normal(0.0, 0.001, (60, 3))
+    far = np.array(
+        [[0.2 + 0.05 * step, 0.3 * (step % 3 - 1), 0.3 * (step % 2 * 2 - 1)] for step in range(15)]
+    )
+    points = np.concatenate([blob, far]).astype(np.float32)
+    centres = np.concatenate([np.arange(11), 60 + np.arange(4)]).astype(np.intp)
+    return points, np.ones(points.shape[0], dtype=np.float64), centres
+
+
+WORSE_MIGRATION_SEED = 10
+BLUR_CHOICE_SEED = 0
+
+
+def game_gear_histogram(seed: int) -> tuple[np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(seed)
+    present = np.unique(rng.integers(0, 4096, int(rng.integers(20, 80)))).astype(np.uint16)
+    counts = rng.integers(1, 200, present.size).astype(np.float64)
+    if rng.random() < 0.5:
+        counts[: present.size // 3] *= 40
+    return lattice.GAME_GEAR.oklab()[present], counts
+
+
+class TestPaletteByBlur:
+    def test_the_master_system_choice_draws_closer_to_the_source_once_blurred(self):
+        # Arrange
+        frame = np.random.default_rng(BLUR_CHOICE_SEED).integers(
+            0, 256, (16, 16, 3), dtype=np.uint8
+        )
+        nearest = dataclasses.replace(lattice.MASTER_SYSTEM, palette_by_blur=False)
+        by_nearest = fresh_fit(frame, ordered_dither=1.0, space=nearest)
+
+        # Act
+        by_blur = fresh_fit(frame, ordered_dither=1.0)
+
+        # Assert
+        assert by_blur.choice.tolist() != by_nearest.choice.tolist()
+        blurred = blurred_error(by_blur.render()[None], frame[None])
+        assert blurred < blurred_error(by_nearest.render()[None], frame[None])
+
+
+class TestMigration:
+    def test_centres_crowded_into_one_blob_move_out_one_a_round(self):
+        # Arrange
+        points, weight, centres = crowded_blob()
+
+        # Act
+        moved = palettes.migrated(points, weight, centres)
+
+        # Assert
+        in_blob = np.linalg.norm(points[moved], axis=1) < BLOB_RADIUS
+        assert int(in_blob.sum()) == 11 - palettes.MIGRATION_ROUNDS
+
+    def test_a_migration_that_would_raise_the_cost_is_discarded(self):
+        # Arrange
+        points, weight = game_gear_histogram(WORSE_MIGRATION_SEED)
+        seeds = palettes._seed_centres(points, weight, count=16)
+        centres = palettes._refine_centres(points, weight, seeds)
+
+        # Act
+        moved = palettes.migrated(points, weight, centres)
+
+        # Assert
+        assert moved.tolist() == centres.tolist()
+
+    def test_a_single_entry_palette_is_left_alone(self):
+        # Arrange
+        present = np.array([3, 40, 2000], dtype=np.uint16)
+        counts = np.array([5, 1, 1], dtype=np.int64)
+
+        # Act
+        result = palettes.choose_entries(
+            present, counts, lattice.GAME_GEAR.oklab(), 1, migrate=True
+        )
+
+        # Assert
+        assert result.tolist() == [3]
 
 
 def grey_ramp() -> np.ndarray:

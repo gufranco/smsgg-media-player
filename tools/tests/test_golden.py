@@ -23,14 +23,14 @@ class Golden:
 
 
 GOLDENS = (
-    Golden(target.MASTER_SYSTEM, GEOMETRY, 45895, 3, 0.04759),
-    Golden(target.MASTER_SYSTEM, GEOMETRY, 43482, 3, 0.04214, menu=True),
+    Golden(target.MASTER_SYSTEM, GEOMETRY, 44361, 3, 0.04666),
+    Golden(target.MASTER_SYSTEM, GEOMETRY, 44024, 3, 0.04176, menu=True),
     Golden(
         target.GAME_GEAR,
         bake.Geometry(columns=20, rows=18, top_row=3, left_column=6),
-        80501,
+        81288,
         6,
-        0.02383,
+        0.02338,
     ),
 )
 
