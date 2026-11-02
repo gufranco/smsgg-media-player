@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/gufranco/smsgg-media-player/compare/v1.1.0...v1.2.0) (2026-11-02)
+
+
+### Bug Fixes
+
+* **bundle:** carry the player's own VDP writes ([3e353ec](https://github.com/gufranco/smsgg-media-player/commit/3e353ec4f88b6578c1eb35121137be6ecc4e2e86))
+
+
+### Features
+
+* pixel aspect, own VDP writes, PSG render ([3e9c573](https://github.com/gufranco/smsgg-media-player/commit/3e9c573d5903598148e904fcd8b32724f35e8a6a))
+
 # [1.1.0](https://github.com/gufranco/smsgg-media-player/compare/v1.0.0...v1.1.0) (2026-11-02)
 
 
