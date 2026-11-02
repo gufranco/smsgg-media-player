@@ -159,8 +159,7 @@ def pack_frames(frames: list[list[bytes]], *, bank_size: int) -> Packed:
             blob += chunk
             room -= len(chunk)
 
-    if room:
-        blob += bytes(room)
+    blob += bytes(room)
     return Packed(blob=bytes(blob), banks=len(blob) // bank_size, starts=tuple(starts))
 
 

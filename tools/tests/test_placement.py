@@ -222,6 +222,30 @@ class TestMergeByPalette:
         # Assert
         assert (keep.shape[0], mapping.tolist()) == (1, [0, 0])
 
+    def test_a_palette_the_room_cannot_reach_leaves_its_cells_unplaced(self):
+        # Arrange
+        tiles = np.stack([tile(1), tile(2), tile(9)])
+        features = np.repeat(tiles.reshape(3, -1), 3, axis=1).astype(np.float32)
+        choice = np.array([0, 0, 1], dtype=np.uint8)
+
+        # Act
+        keep, mapping = placement.merge_by_palette(tiles, views(features), choice, room=1)
+
+        # Assert
+        assert (keep.shape[0], int(mapping[2])) == (1, -1)
+
+    def test_no_room_places_nothing(self):
+        # Arrange
+        tiles = np.stack([tile(1), tile(2), tile(9)])
+        features = np.repeat(tiles.reshape(3, -1), 3, axis=1).astype(np.float32)
+        choice = np.array([0, 0, 1], dtype=np.uint8)
+
+        # Act
+        keep, mapping = placement.merge_by_palette(tiles, views(features), choice, room=0)
+
+        # Assert
+        assert (keep.shape[0], mapping.tolist()) == (0, [-1, -1, -1])
+
 
 class TestShareRoom:
     @pytest.mark.parametrize(
@@ -331,6 +355,26 @@ class TestBetterStandIns:
         # Assert
         assert result.tolist() == [red]
 
+    def test_no_candidate_on_screen_leaves_every_cell_where_it_was(self):
+        # Arrange
+        fitted = one_cell(3)
+        features = fidelity.cell_colours(fitted.indices, fitted, 1.0).reshape(1, -1)
+        cache, (red, _) = resident(1, 2)
+
+        # Act
+        result = placement.better_standins(
+            fitted,
+            features,
+            features,
+            cell_slot=np.array([red], dtype=np.int32),
+            cache=cache,
+            candidates=set(),
+            chroma_weight=1.0,
+        )
+
+        # Assert
+        assert result.tolist() == [red]
+
     def test_a_cell_showing_its_own_tile_is_left_alone(self):
         # Arrange
         fitted = one_cell(1)
@@ -402,6 +446,23 @@ class TestRebalancingBetweenPalettes:
 
         # Act
         keep, mapping = placement.merge_by_palette(tiles, cells, choice, room=3)
+
+        # Assert
+        shown = [int(keep[mapping[cell]][0, 0]) for cell in range(8)]
+        assert (len(set(shown[:6])), shown[6:]) == (1, [9, 10])
+
+    def test_one_round_of_rebalancing_is_kept_when_the_rounds_run_out(self):
+        # Arrange
+        tiles = np.stack([tile(value) for value in (1, 2, 3, 4, 5, 6, 9, 10)])
+        cells = flat_views(
+            perceived=(0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.0, 10.0),
+            rendered=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+            source=(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+        )
+        choice = np.array([0, 0, 0, 0, 0, 0, 1, 1], dtype=np.uint8)
+
+        # Act
+        keep, mapping = placement.merge_by_palette(tiles, cells, choice, room=3, rounds=1)
 
         # Assert
         shown = [int(keep[mapping[cell]][0, 0]) for cell in range(8)]

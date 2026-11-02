@@ -171,6 +171,17 @@ class TestMergeToCap:
         assert mapping[0] == mapping[1] == mapping[2]
         assert mapping[3] == mapping[4] == mapping[5]
 
+    def test_tiles_that_look_alike_keep_the_cap_and_all_join_the_first_representative(self):
+        # Arrange
+        tiles = np.stack([np.full((8, 8), level, dtype=np.uint8) for level in (1, 2, 3)])
+        features = np.zeros((3, 4), dtype=np.float64)
+
+        # Act
+        keep, mapping = workingset.merge_to_cap(tiles, cap=2, features=features)
+
+        # Assert
+        assert (keep.shape[0], mapping.tolist()) == (2, [0, 0, 0])
+
     def test_a_cap_below_one_is_refused(self):
         # Arrange
         tiles = np.zeros((2, 8, 8), dtype=np.uint8)

@@ -112,6 +112,17 @@ class TestMachine:
         # Assert
         assert done is False
 
+    def test_a_chunk_with_no_terminator_applies_its_runs_and_is_not_a_frame(self):
+        # Arrange
+        m = replay.Machine()
+        chunk = bytes([stream.VRAM, 0x00, 0x01, 2, 7, 8])
+
+        # Act
+        done = m.apply(chunk)
+
+        # Assert
+        assert (done, m.vram[0x100:0x102].tolist()) == (False, [7, 8])
+
     def test_writes_wrap_at_the_end_of_vram(self):
         # Arrange
         m = replay.Machine()

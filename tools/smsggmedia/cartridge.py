@@ -303,8 +303,7 @@ def _build_cartridge(system: target.Target) -> int:
     if completed.returncode != 0:
         return completed.returncode
     rom = rom_for(system)
-    if rom.exists():
-        print(f"{rom}  {rom.stat().st_size} bytes")
+    print(f"{rom}  {rom.stat().st_size} bytes")
     return 0
 
 

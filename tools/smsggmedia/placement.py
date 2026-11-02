@@ -110,12 +110,10 @@ def _upload_fresh(
     allocation = cache.allocate(pattern.pack_patterns(keep), referenced=plan.protected)
     served = mapping >= 0
     placed = np.full(mapping.shape, workingset.UNPLACED, dtype=np.int32)
-    if keep.shape[0]:
-        placed[served] = allocation.slots[mapping[served]]
+    placed[served] = allocation.slots[mapping[served]]
     substituted = served.copy()
-    if keep.shape[0]:
-        own = keep[mapping[served]].reshape(int(served.sum()), -1)
-        substituted[served] = np.any(own != tiles[served].reshape(own.shape), axis=1)
+    own = keep[mapping[served]].reshape(int(served.sum()), -1)
+    substituted[served] = np.any(own != tiles[served].reshape(own.shape), axis=1)
     return placed, allocation.uploads, int(substituted.sum())
 
 
@@ -176,6 +174,7 @@ def merge_by_palette(
     choice: npt.NDArray[np.uint8],
     *,
     room: int,
+    rounds: int = REBALANCE_ROUNDS,
 ) -> tuple[npt.NDArray[np.uint8], npt.NDArray[np.intp]]:
     groups = [np.flatnonzero(choice == palette) for palette in np.unique(choice)]
     distinct = [
@@ -186,7 +185,7 @@ def merge_by_palette(
         _merge_group(tiles, views, group, share)
         for group, share in zip(groups, shares, strict=True)
     ]
-    for _ in range(REBALANCE_ROUNDS):
+    for _ in range(rounds):
         moved = _rebalanced(tiles, views, groups, shares=shares, merged=merged, distinct=distinct)
         if moved is None:
             break
@@ -228,8 +227,6 @@ def _rebalanced(
     most = min(shares[donor] - 1, distinct[needy] - shares[needy])
     before = sum(item.wrong for item in merged)
     for step in sorted({min(most, merged[needy].wrong * scale) for scale in REBALANCE_SCALES}):
-        if step < 1:
-            continue
         trial = [*shares]
         trial[needy], trial[donor] = shares[needy] + step, shares[donor] - step
         again = [*merged]
@@ -435,13 +432,11 @@ def _own_tiles_first(
     mapping = np.full(tiles.shape[0], -1, dtype=np.intp)
     mapping[forced] = inverse.reshape(-1)
     rest = np.flatnonzero(~forced)
-    kept = own.reshape(-1, *tiles.shape[1:])
-    if rest.size:
-        others, local = workingset.merge_to_cap(
-            tiles[rest], cap=cap - own.shape[0], features=features[rest]
-        )
-        mapping[rest] = local + own.shape[0]
-        kept = np.concatenate([kept, others])
+    others, local = workingset.merge_to_cap(
+        tiles[rest], cap=cap - own.shape[0], features=features[rest]
+    )
+    mapping[rest] = local + own.shape[0]
+    kept = np.concatenate([own.reshape(-1, *tiles.shape[1:]), others])
     return _shared_patterns(kept, mapping)
 
 

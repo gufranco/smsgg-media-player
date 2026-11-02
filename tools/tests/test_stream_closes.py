@@ -51,6 +51,16 @@ class TestDeferCloses:
         # Assert
         assert result == frames
 
+    def test_a_chunk_of_picture_runs_with_no_terminator_is_unchanged(self):
+        # Arrange
+        frames = [[bytes([stream.VRAM, 0x20, 0x00, 2, 7, 7])]]
+
+        # Act
+        result = stream.defer_closes(frames)
+
+        # Assert
+        assert result == frames
+
     def test_runs_before_the_closing_run_stay_in_their_field(self):
         # Arrange
         first = stream.encode_chunks(

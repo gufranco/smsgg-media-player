@@ -42,7 +42,7 @@ def by_clock(
     result = Schedule()
     position = 0
     pick = min(due_at(position, fps=fps, slot=slot), len(decoded) - 1)
-    for _ in range(len(decoded)):
+    while pick < len(decoded):
         chunks = _encode(encoder, result, decoded, pick=pick, fps=fps, every=keyframe_every)
         shown = stream.pace(chunks, fields=slot) if pace else chunks
         if not result.frames:
@@ -53,8 +53,6 @@ def by_clock(
         result.lags.append((completed - field_of(pick, fps=fps)) / FIELD_HZ)
         position += len(shown)
         pick = max(pick + 1, due_at(position - result.lead, fps=fps, slot=slot))
-        if pick >= len(decoded):
-            break
     result.unshown_tail = len(decoded) - 1 - result.picks[-1]
     return result
 

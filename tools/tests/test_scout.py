@@ -323,6 +323,25 @@ class TestProfile:
         starts = [p.start for p in result]
         assert starts == sorted(starts)
 
+    def test_a_probe_past_the_end_of_the_film_is_dropped(self, clip):
+        # Arrange
+        footage = tune.Footage(clip, start=0.0, duration=20.0, scaler="area")
+        settings = tune.EncodeSettings(
+            cartridge.geometry_for(8, 6), budget=1400, cap=60, reuse=0.008
+        )
+
+        # Act
+        result = scout.profile(
+            footage,
+            settings,
+            fps=6.0,
+            denoise=0.0,
+            probing=scout.Probing(probe_seconds=0.5, stride_seconds=2.0),
+        )
+
+        # Assert
+        assert [p.start for p in result] == [0.0, 2.0, 4.0]
+
     def test_a_probe_dithers_like_the_bake_unless_told_otherwise(self, clip):
         # Arrange
         shipped = self._probes(clip)
@@ -399,6 +418,16 @@ class TestMain:
         # Assert
         assert status == 0
         assert "estimates" in capsys.readouterr().out
+
+    def test_a_range_wholly_past_the_film_takes_no_probe_and_says_so(self, clip, capsys):
+        # Arrange
+        argv = self._argv(clip, ["--begin", "50", "--end", "60"])
+
+        # Act
+        status = scout.main(argv)
+
+        # Assert
+        assert (status, "no probe fit inside the film" in capsys.readouterr().out) == (2, True)
 
     def test_a_window_longer_than_the_film_is_refused(self, clip):
         # Arrange

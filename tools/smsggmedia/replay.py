@@ -29,9 +29,7 @@ class Machine:
 
     def apply(self, chunk: bytes) -> bool:
         pos = 0
-        for _ in range(len(chunk)):
-            if pos >= len(chunk):
-                return False
+        while pos < len(chunk):
             kind = chunk[pos]
             if kind == stream.END_FRAME:
                 return True

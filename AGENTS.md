@@ -22,7 +22,7 @@ Nothing here is verified by compiling. Run the gate.
 | The C holds | `make analyse` |
 | No VDP write pair is under its floor, and every blank copy is guarded | `make timing`, `make timing TARGET=gg` and `SMSGGMEDIA_ROM_REQUIRED=1 pytest tools/tests/test_replay_on_z80.py tools/tests/test_gg_build.py`, after `make rom` and `make rom TARGET=gg` |
 | The baker holds | `uv --project tools run ruff format --check tools/`, `ruff check tools/`, `mypy tools/smsggmedia tools/scripts` |
-| The behaviour holds | `SMSGGMEDIA_CLIPS_REQUIRED=1 uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts --cov-config=tools/pyproject.toml --cov-fail-under=95` |
+| The behaviour holds | `SMSGGMEDIA_CLIPS_REQUIRED=1 uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts --cov-config=tools/pyproject.toml --cov-fail-under=100` |
 | A commit is clean | [`.githooks/pre-commit`](.githooks/pre-commit), installed once by `make hooks` |
 | Every VDP write of the running ROMs keeps its floor | `uv --project tools run python tools/scripts/trace_vdp.py build/smsggmedia.sms` and `--target gg` on `build/smsggmedia.gg`: MAME headless, its Mark III and Game Gear drivers, no BIOS, every port access timed to the cycle from power-on. Local only; the hook sets `SMSGGMEDIA_MAME_REQUIRED=1` when the player changes |
 | It runs on a console | the Game Gear, reported by the owner; nothing on this machine settles it |
@@ -477,7 +477,7 @@ uv --project tools run ruff format tools/
 uv --project tools run ruff check tools/
 uv --project tools run mypy tools/smsggmedia tools/scripts
 uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts \
-    --cov-config=tools/pyproject.toml --cov-fail-under=95
+    --cov-config=tools/pyproject.toml --cov-fail-under=100
 
 uv --project tools run python tools/scripts/fetch_clips.py     # the regression films
 uv --project fmv-core-python run python -m fmvcore.fixture     # the committed clip, in the core
@@ -568,7 +568,9 @@ from the same command, and look at the sheet before quoting a number.
 
 ## What CI holds
 
-- The coverage floor is passed on the command line, `--cov-fail-under=95`.
+- The coverage floor is passed on the command line, `--cov-fail-under=100`,
+  with no exclusion: every entry point's `__main__` block is run by
+  `tools/tests/test_entry_points.py`.
   coverage reads the `pyproject.toml` of the working directory, and the root
   one carries only the release config, so a floor in `tools/pyproject.toml`
   is ignored; that was confirmed by raising it to 99 and watching a run pass.

@@ -365,12 +365,11 @@ in as the film plays, and the binding constraint is the bytes the console
 accepts in a field rather than the size of a cartridge. It decodes, scores,
 verifies films and measures captures through `fmv-core-python`.
 
-Gaps against "What every player does" (as of 2026-10-17):
+Gaps against "What every player does" (as of 2026-11-02):
 
-- Coverage is 98% of statements and branches overall, with 13 of the 37
-  measured files below 100%, and CI enforces 95%. Many tests drive one
-  function rather than a bake or the built ROM. Both bars of the 2026-10-17
-  requirement, every file covered and every test end to end, are open.
+- Every file is at 100% of statements and branches, with no exclusion, and
+  CI enforces 100%. Many tests drive one function rather than a bake or the
+  built ROM, so the end-to-end bar of the 2026-10-17 requirement is open.
 - The Game Gear cartridge, `--target gg`, has not run on a Game Gear in its
   own mode.
 

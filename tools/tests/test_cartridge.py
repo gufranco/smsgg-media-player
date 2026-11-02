@@ -1,3 +1,4 @@
+import argparse
 import io
 import json
 import logging
@@ -248,6 +249,27 @@ class TestMain:
         # Assert
         assert path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
+    def test_a_video_preview_is_written_when_the_name_asks_for_one(self, clip, tmp_path):
+        # Arrange
+        path = tmp_path / "preview.mp4"
+
+        # Act
+        cartridge.main([*bake_only_argv(clip, tmp_path), "--preview", str(path)])
+
+        # Assert
+        assert path.read_bytes()[4:8] == b"ftyp"
+
+    def test_subtitles_are_announced_when_burned_in(self, clip, tmp_path, capsys):
+        # Arrange
+        cues = tmp_path / "cues.srt"
+        cues.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello\n\n")
+
+        # Act
+        cartridge.main([*bake_only_argv(clip, tmp_path), "--subtitles", str(cues)])
+
+        # Assert
+        assert "burning 1 subtitles into the picture" in capsys.readouterr().out
+
     def test_no_slot_collision_survives_a_bake(self, clip, tmp_path):
         # Arrange
         argv = bake_only_argv(clip, tmp_path)
@@ -342,6 +364,29 @@ class TestStepDown:
         report = json.loads((tmp_path / "report.json").read_text())
         assert (code, report["banks"], report["fps"] < UNCAPPED_FPS) == (0, 1, True)
 
+    def test_a_film_no_rung_can_fit_is_refused_without_stepping_down(self, clip, tmp_path, capsys):
+        # Arrange
+        argv = [
+            *_tight(clip, tmp_path),
+            "--duration",
+            "2",
+            "--columns",
+            "32",
+            "--rows",
+            "18",
+            "--cap",
+            "220",
+            "--reuse",
+            "0.0",
+        ]
+
+        # Act
+        code = cartridge.main(argv)
+
+        # Assert
+        out = capsys.readouterr().out
+        assert (code, "stepped down" in out, "not even one second" in out) == (2, False, True)
+
     def test_a_fixed_frame_rate_is_never_stepped_down(self, clip, tmp_path):
         # Arrange
         argv = _tight(clip, tmp_path, "--fps", "12")
@@ -395,6 +440,42 @@ class TestCapacity:
 
         # Assert
         assert result is True
+
+
+def baked(*, collisions: int = 0, unshown_tail: int = 0) -> cartridge.Baked:
+    return cartridge.Baked(
+        encoded=bake.Encoded(collisions=collisions),
+        fields=[],
+        decoded=12,
+        lags=[],
+        lead=0,
+        unshown_tail=unshown_tail,
+        dither=limits.DEFAULT_DITHER,
+        sources=[],
+    )
+
+
+class TestWhatABakeSays:
+    def test_frames_the_clock_passed_at_the_end_are_named(self, capsys):
+        # Arrange
+        result = baked(unshown_tail=2)
+
+        # Act
+        cartridge._describe_bake(result, fps=12.0)
+
+        # Assert
+        assert "the clock passed the last 2 decoded frames" in capsys.readouterr().out
+
+    def test_a_bake_with_a_slot_collision_writes_no_film(self, capsys):
+        # Arrange
+        args = argparse.Namespace(max_banks=limits.DEFAULT_MAX_BANKS)
+        settled = dials.Dials(fps=12.0, denoise=0.0, reuse=0.008)
+
+        # Act
+        code = cartridge._refusal(args, baked=baked(collisions=3), banks=1, settled=settled)
+
+        # Assert
+        assert (code, "3 slot collisions" in capsys.readouterr().out) == (1, True)
 
 
 class TestKeyFields:

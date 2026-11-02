@@ -144,6 +144,18 @@ class TestRouting:
         # Assert
         assert (values[0], settled(values, 10)) == (0xFF, 0xEF)
 
+    def test_a_tone_with_no_sound_in_either_side_stays_on_both(self):
+        # Arrange
+        melody = tone(440.0, 0.5)
+        writes = psgsound.synthesize(melody, rate=RATE, fields=20)
+        silence = np.zeros_like(melody)
+
+        # Act
+        values = psgpan.pans(stereo(silence, silence), rate=RATE, writes=writes)
+
+        # Assert
+        assert (values[0], settled(values, 10)) == (0xFF, 0xFF)
+
     def test_a_centred_melody_writes_only_on_refresh_fields(self):
         # Arrange
         melody = tone(440.0, 2.2)

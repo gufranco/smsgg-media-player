@@ -9,7 +9,7 @@ English | [日本語](README.ja.md) | [简体中文](README.zh-Hans.md) | [繁�
 
 [![ci](https://img.shields.io/github/actions/workflow/status/gufranco/smsgg-media-player/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/gufranco/smsgg-media-player?style=flat-square&label=release)](https://github.com/gufranco/smsgg-media-player/releases/latest)
-[![coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=flat-square)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?style=flat-square)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/gufranco/smsgg-media-player?style=flat-square&label=license)](LICENSE)
 
 </div>
@@ -604,8 +604,8 @@ uv --project tools run ruff check tools/
 # Type gate
 uv --project tools run mypy tools/smsggmedia tools/scripts
 
-# Tests, with the 95% coverage floor
-uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts --cov-config=tools/pyproject.toml --cov-fail-under=95
+# Tests, with the 100% coverage floor
+uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts --cov-config=tools/pyproject.toml --cov-fail-under=100
 
 # Fetch and verify the regression films
 uv --project tools run python tools/scripts/fetch_clips.py

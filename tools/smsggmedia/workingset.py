@@ -87,13 +87,11 @@ class WorkingSet:
         }
 
     def residents(self) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.uint8]]:
-        slots = sorted(self._where.values())
-        data = np.zeros((len(slots), PATTERN_BYTES), dtype=np.uint8)
-        for row, slot in enumerate(slots):
-            payload = self._occupant[slot]
-            if payload is not None:
-                data[row] = np.frombuffer(payload, dtype=np.uint8)
-        return np.array(slots, dtype=np.int32), data
+        placed = sorted(self._where.items(), key=lambda item: item[1])
+        data = np.zeros((len(placed), PATTERN_BYTES), dtype=np.uint8)
+        for row, (payload, _) in enumerate(placed):
+            data[row] = np.frombuffer(payload, dtype=np.uint8)
+        return np.array([slot for _, slot in placed], dtype=np.int32), data
 
 
 def match_residents(

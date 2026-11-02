@@ -292,6 +292,16 @@ class TestResolution:
         # Assert
         assert any(clip.key == wanted for clip, _ in available)
 
+    def test_available_leaves_out_films_this_machine_does_not_hold(self, tmp_path, monkeypatch):
+        # Arrange
+        monkeypatch.setenv(clips.DIRECTORY_ENV, str(tmp_path))
+
+        # Act
+        available = clips.available()
+
+        # Assert
+        assert [clip.key for clip, _ in available] == ["synthetic"]
+
 
 GIT_HOOK_VARIABLES = frozenset({"GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE", "GIT_PREFIX"})
 

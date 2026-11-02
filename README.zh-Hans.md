@@ -9,7 +9,7 @@
 
 [![ci](https://img.shields.io/github/actions/workflow/status/gufranco/smsgg-media-player/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/gufranco/smsgg-media-player?style=flat-square&label=release)](https://github.com/gufranco/smsgg-media-player/releases/latest)
-[![coverage](https://img.shields.io/badge/coverage-95%25-brightgreen?style=flat-square)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?style=flat-square)](https://github.com/gufranco/smsgg-media-player/actions/workflows/ci.yml)
 [![license](https://img.shields.io/github/license/gufranco/smsgg-media-player?style=flat-square&label=license)](LICENSE)
 
 </div>
@@ -435,8 +435,8 @@ uv --project tools run ruff check tools/
 # 类型检查门禁
 uv --project tools run mypy tools/smsggmedia tools/scripts
 
-# 测试，带 95% 覆盖率下限
-uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts --cov-config=tools/pyproject.toml --cov-fail-under=95
+# 测试，带 100% 覆盖率下限
+uv --project tools run python -m pytest tools/tests --cov=smsggmedia --cov=tools/scripts --cov-config=tools/pyproject.toml --cov-fail-under=100
 
 # 获取并校验回归影片
 uv --project tools run python tools/scripts/fetch_clips.py

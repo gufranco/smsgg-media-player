@@ -110,6 +110,27 @@ class TestReuseThatCannotFit:
         assert value in tune.DEFAULT_REUSE_CANDIDATES
         assert "none fit" in caplog.text
 
+    def test_it_says_when_every_candidate_left_cells_stale(self, source, caplog):
+        # Arrange
+        caplog.set_level(logging.INFO, logger=dials.LOG.name)
+        one_upload = tune.EncodeSettings(SMALL, budget=600, cap=40, upload_ceiling=1)
+
+        # Act
+        value = dials.resolve_reuse(
+            "auto",
+            tune.Footage(source, start=0.0, duration=1.0, scaler="area"),
+            one_upload,
+            fps=6.0,
+            denoise=0.0,
+            max_per_frame=1_000_000.0,
+        )
+
+        # Assert
+        assert (value in tune.DEFAULT_REUSE_CANDIDATES, "too many cells stale" in caplog.text) == (
+            True,
+            True,
+        )
+
 
 @needs_ffmpeg
 class TestTheRateSearch:

@@ -297,6 +297,18 @@ class TestEncodeFrames:
         # Assert
         assert str(refused.value) == "a movie needs at least one frame"
 
+    def test_an_encoder_asked_for_its_result_before_any_frame_refuses(self):
+        # Arrange
+        geometry = bake.Geometry(columns=8, rows=6, top_row=0)
+        encoder = bake.Encoder(geometry=geometry, budget=600, cap=40)
+
+        # Act
+        with pytest.raises(ValueError) as refused:
+            encoder.result()
+
+        # Assert
+        assert str(refused.value) == "a movie needs at least one frame"
+
 
 class TestReusedSlotsSurvive:
     def _stream(self, count: int = 24):

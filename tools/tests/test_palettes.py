@@ -31,6 +31,29 @@ class TestChooseEntries:
         # Assert
         assert result.shape == (16,)
 
+    def test_no_colour_present_gives_a_palette_of_entry_zero(self):
+        # Arrange
+        present = np.array([], dtype=np.uint8)
+        counts = np.array([], dtype=np.int64)
+
+        # Act
+        result = palettes.choose_entries(present, counts, lattice.MASTER_SYSTEM.oklab(), 4)
+
+        # Assert
+        assert result.tolist() == [0, 0, 0, 0]
+
+    def test_colours_that_look_alike_still_fill_distinct_slots(self):
+        # Arrange
+        present = np.array([5, 9, 12], dtype=np.uint8)
+        counts = np.array([10, 10, 10], dtype=np.int64)
+        alike = np.zeros((64, 3), dtype=np.float32)
+
+        # Act
+        result = palettes.choose_entries(present, counts, alike, 2)
+
+        # Assert
+        assert result.tolist() == [5, 9]
+
     def test_fewer_present_colours_than_slots_are_all_kept(self):
         # Arrange
         present = np.array([0, 5, 63], dtype=np.uint8)

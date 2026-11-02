@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from fmvcore.capture import Played
 
 from smsggmedia import bake, capture, lattice, stream, target
 
@@ -206,6 +207,48 @@ class TestTheLeadIn:
         # Assert
         report = json.loads(out.read_text())
         assert report["lag_first_s"] > 0.0
+
+
+class TestTheReportWithoutAFile:
+    def test_the_report_is_printed_when_no_file_is_named(self, gate, made, capsys):
+        # Arrange
+        argv = _argv(made, made / "unused.json")[:-2]
+
+        # Act
+        code = gate.main(argv)
+
+        # Assert
+        assert (code, json.loads(capsys.readouterr().out)["emulator_mismatches"]) == (0, 0)
+
+
+def mixed_film() -> Played:
+    height, width = 16, 24
+    levels = (0, 100, 200)
+    fields = np.stack([np.full((height, width, 3), level, dtype=np.uint8) for level in levels])
+    return Played(fields=fields, completes=[0, 2])
+
+
+class TestTheSheetWithMixing:
+    def test_a_field_showing_neither_neighbour_is_the_worst(self, gate):
+        # Arrange
+        played = mixed_film()
+
+        # Act
+        found = gate.worst_mixed(played)
+
+        # Assert
+        assert found == (0, 1, 2)
+
+    def test_the_sheet_shows_the_three_fields_beside_the_source(self, gate, tmp_path):
+        # Arrange
+        played = mixed_film()
+        sheet = tmp_path / "sheet.png"
+
+        # Act
+        gate.write_sheet(sheet, played, played.fields.copy())
+
+        # Assert
+        assert int.from_bytes(sheet.read_bytes()[16:20], "big") == 4 * played.fields.shape[2]
 
 
 class TestTheSheetWithoutMixing:
