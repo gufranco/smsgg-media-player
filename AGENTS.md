@@ -672,8 +672,9 @@ button 2, and the black and white sprite entries the replay writes while the
 overlay is up. The report did not itemise each check, so a defect found later
 on any of them goes back on this list with what was seen.
 
-Still open: the owner's verdict on the dither default, and a listening verdict
-on the PSG sound. The PSG now falls silent with the screen when a film ends,
+Still open: a listening verdict on the PSG sound. The dither stays on by
+default on both consoles, under the owner's rule of 2026-11-02 that every
+default is the best picture. The PSG now falls silent with the screen when a film ends,
 stops or faults; before, the last note sounded on over the black or red
 screen. That change to `src/main.c` and `src/screen.c` has not run on a
 console yet. The next change to `src/replay.s`, the transfer loop or the
