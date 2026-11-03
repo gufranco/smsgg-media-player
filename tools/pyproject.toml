@@ -1,6 +1,6 @@
 [project]
 name = "smsggmedia"
-version = "1.2.0"
+version = "1.2.1"
 description = "Offline baker that turns a video file into a Sega Master System movie ROM"
 requires-python = ">=3.14"
 license = "MIT"

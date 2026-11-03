@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/gufranco/smsgg-media-player/compare/v1.2.0...v1.2.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **tune:** never loosen reuse to fit a film ([f6a9f65](https://github.com/gufranco/smsgg-media-player/commit/f6a9f65bcf24d01929d123240ec3c6b302204f77))
+
 # [1.2.0](https://github.com/gufranco/smsgg-media-player/compare/v1.1.0...v1.2.0) (2026-11-02)
 
 
