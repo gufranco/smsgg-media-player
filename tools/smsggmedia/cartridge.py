@@ -32,6 +32,7 @@ from smsggmedia import (
     stepdown,
     stream,
     target,
+    tune,
 )
 
 P90: Final = 0.9
@@ -350,12 +351,12 @@ Attempt = tuple[dials.Dials, Baked, stream.Packed]
 
 
 def bake_to_fit(args: argparse.Namespace, *, geometry: bake.Geometry, wanted: float) -> Attempt:
-    first = _attempt(args, geometry=geometry, wanted=wanted)
+    first = _coarsened_attempt(args, geometry=geometry, wanted=wanted)
     if _fits_cartridge(args, first) or args.fps != AUTO:
         return first
     found = stepdown.search(
         stepdown.rungs(first[0].fps, sound=not args.silent),
-        lambda rung: _attempt(_on_rung(args, rung), geometry=geometry, wanted=wanted),
+        lambda rung: _coarsened_attempt(_on_rung(args, rung), geometry=geometry, wanted=wanted),
         lambda attempt: _fits_cartridge(args, attempt),
     )
     if found is None:
@@ -365,6 +366,25 @@ def bake_to_fit(args: argparse.Namespace, *, geometry: bake.Geometry, wanted: fl
     banks = "bank" if args.max_banks == 1 else "banks"
     print(f"stepped down to {rung.fps:g} fps{quiet} to fit {args.max_banks} {banks}")
     return attempt
+
+
+def _coarsened_attempt(
+    args: argparse.Namespace, *, geometry: bake.Geometry, wanted: float
+) -> Attempt:
+    first = _attempt(args, geometry=geometry, wanted=wanted)
+    if args.reuse != AUTO:
+        return first
+    return stepdown.coarsened(
+        first,
+        tried=first[0].reuse,
+        candidates=tune.DEFAULT_REUSE_CANDIDATES,
+        attempt=lambda reuse: _attempt(
+            argparse.Namespace(**{**vars(args), "reuse": str(reuse)}),
+            geometry=geometry,
+            wanted=wanted,
+        ),
+        fits=lambda attempt: _fits_cartridge(args, attempt),
+    )
 
 
 def _attempt(args: argparse.Namespace, *, geometry: bake.Geometry, wanted: float) -> Attempt:

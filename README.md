@@ -415,6 +415,29 @@ scores within 5% of the best are a tie that the cheapest candidate wins,
 because a percent or two is noise while the dearer setting mints more tiles
 than a frame has free slots.
 
+The search never goes looser than 0.008, the default, to make a film fit. A
+looser threshold lets a cell draw a resident tile that only resembles it, and
+on screen that is an 8 by 8 block of the wrong colour: olive, teal or blue
+squares in the grey snow of the Sintel trailer. Counted as cells whose blurred
+error to the source rises more than 0.05 over their own tile's, at 12 fps on
+three seconds of each film:
+
+| Film | Damaged cells a frame at 0.016 | At 0.008 |
+|---|---|---|
+| Sintel | 78 | 1.4 |
+| Hong Kong | 215 | 36 |
+| Popeye | 299 | 23 |
+| Dance | 224 | 74 |
+
+No measure of the match itself separates a damaging reuse from a harmless
+one, so the threshold is the guard. A film that needs more bytes a frame than
+0.008 leaves overruns the cartridge instead, and the step-down ladder lowers
+the frame rate, because the picture outranks the frame rate. Before each
+slower rate, a bake that overruns is tried again at the next coarser reuse,
+up to 0.008, because a slower rate's search spends its larger room on a finer
+threshold: without that retry the whole Sintel trailer fell to 3 fps and left
+15 of 62 banks empty, where 6 fps fits in 57.
+
 `--reuse <value>` still forces one. The historical curve, measured on a single
 twenty-second window at 32x18:
 

@@ -13,7 +13,7 @@ from fmvcore import source as bar_analysis
 from smsggmedia import bake, capture, frames, limits, pattern, stream, target
 
 DEFAULT_CANDIDATES: Final = (0.0, 2.0, 4.0, 8.0)
-DEFAULT_REUSE_CANDIDATES: Final = (0.016, 0.008, 0.004, 0.002, 0.001)
+DEFAULT_REUSE_CANDIDATES: Final = (bake.DEFAULT_REUSE, 0.004, 0.002, 0.001)
 DEFAULT_WINDOWS: Final = 3
 DEFAULT_WINDOW_SECONDS: Final = 2.0
 STALE_TOLERANCE: Final = 0.005

@@ -991,6 +991,14 @@ Neo Geo player uses for its tiers, finds the best rung that fits while baking
 as few as it can, and each rung is baked at most once. A frame rate given with
 `--fps` is never stepped down: the bake refuses with the shortfall instead.
 
+`coarsened` runs before any slower rate is tried. A bake with a measured reuse
+that overruns the cartridge is baked again at each coarser candidate in turn,
+up to 0.008, at the same rate. A slower rung has more room per frame, so the
+reuse search there spends it on a finer threshold, and the sampled windows
+underestimate the film: without the retry the Sintel trailer fell from 12 fps
+to 3 fps in 47 of 62 banks, where 6 fps at 0.008 fits in 57. A reuse given
+with `--reuse` is never retried.
+
 ### [`smsggmedia/stream.py`](smsggmedia/stream.py)
 
 The command stream the on-cart player replays.
@@ -1106,6 +1114,19 @@ against the fitted palettes instead, the same substitution moves 0.0060 to
 owns, and on its 90th percentile across frames rather than its mean: a cut
 changes everything at once, and a threshold that wins on the average can
 smear that one frame badly enough to be the thing a viewer remembers.
+
+The reuse candidates stop at the default, `bake.DEFAULT_REUSE`, 0.008. A
+candidate looser than that only ever won on bytes: when the cartridge's room
+per frame was too small for the rest, it was the one that fitted, and a bake
+that fits never reaches the step-down ladder, so the picture paid for the
+frame rate. On the Sintel trailer that bake put olive, teal and blue 8 by 8
+cells in the snow, and every one of them was a resident reused at 0.016:
+merging, stand-ins and held cells added none. Damaged cells a frame fell from
+78 to 1.4 on Sintel, 215 to 36 on Hong Kong, 299 to 23 on Popeye and 224 to 74
+on the dance at 0.008. Raw, blurred and to-source distances of the match all
+overlap between damaging and harmless reuse, so no guard on the match
+replaces the bound. Now such a film overruns the cartridge and the ladder
+lowers the rate.
 
 Both searches treat scores within `SCORE_TIE` of the best as a tie that the
 cheapest candidate wins. Two settings a percent or two apart are measuring

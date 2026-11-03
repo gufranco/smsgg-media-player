@@ -791,6 +791,17 @@ total reads mostly noise from the dial it is turning. The search takes the
 cut changes everything at once and a threshold that wins on the average can
 smear that one frame.
 
+The search never goes looser than the default, 0.008, `bake.DEFAULT_REUSE`.
+A looser threshold only won when it was the one candidate that fitted the
+cartridge's room per frame, the bake then fitted, and the step-down ladder
+never ran, so the picture paid for the frame rate: the Sintel trailer at
+0.016 showed olive, teal and blue 8 by 8 cells, every one a reused resident.
+Do not add a looser candidate back to buy running time; a film that needs it
+steps its rate down instead. Before each slower rate, `stepdown.coarsened`
+bakes an overrunning measured reuse again at each coarser candidate up to
+0.008, since a slower rate's search spends its larger room on a finer
+threshold and the ladder then falls further than it needs to.
+
 Denoise is scored on the replayed picture against one reference decoded with
 no denoise, blurred alike on both sides, never on the encoder's error against
 its own filtered input. Scored that way a stronger filter always looked easier

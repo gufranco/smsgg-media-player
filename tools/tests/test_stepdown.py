@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from smsggmedia import stepdown
 
 Rung = stepdown.Rung
@@ -103,3 +105,67 @@ class TestSearch:
 
         # Assert
         assert len(baked) == len(set(baked))
+
+
+CANDIDATES = (0.008, 0.004, 0.002, 0.001)
+BANKS_AT_REUSE = {0.008: 1, 0.004: 3, 0.002: 4}
+
+
+def recording_bakes() -> tuple[list[float], Callable[[float], int]]:
+    baked: list[float] = []
+
+    def bake(reuse: float) -> int:
+        baked.append(reuse)
+        return BANKS_AT_REUSE[reuse]
+
+    return baked, bake
+
+
+class TestCoarsened:
+    def test_an_overrun_is_baked_again_coarser_until_one_fits(self):
+        # Arrange
+        baked, bake = recording_bakes()
+
+        # Act
+        result = stepdown.coarsened(
+            4, tried=0.002, candidates=CANDIDATES, attempt=bake, fits=lambda banks: banks <= 1
+        )
+
+        # Assert
+        assert (result, baked) == (1, [0.004, 0.008])
+
+    def test_a_bake_that_fits_is_kept_without_another(self):
+        # Arrange
+        baked, bake = recording_bakes()
+
+        # Act
+        result = stepdown.coarsened(
+            4, tried=0.002, candidates=CANDIDATES, attempt=bake, fits=lambda banks: banks <= 4
+        )
+
+        # Assert
+        assert (result, baked) == (4, [])
+
+    def test_when_nothing_coarser_fits_the_coarsest_bake_is_returned(self):
+        # Arrange
+        baked, bake = recording_bakes()
+
+        # Act
+        result = stepdown.coarsened(
+            4, tried=0.002, candidates=CANDIDATES, attempt=bake, fits=lambda banks: banks <= 0
+        )
+
+        # Assert
+        assert (result, baked) == (1, [0.004, 0.008])
+
+    def test_a_bake_already_at_the_coarsest_reuse_is_not_retried(self):
+        # Arrange
+        baked, bake = recording_bakes()
+
+        # Act
+        result = stepdown.coarsened(
+            2, tried=0.008, candidates=CANDIDATES, attempt=bake, fits=lambda banks: banks <= 1
+        )
+
+        # Assert
+        assert (result, baked) == (2, [])

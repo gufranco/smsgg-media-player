@@ -34,3 +34,19 @@ def search[Result](
 
     found = ladder.first_fit(len(steps), lambda index: fits(tried(index)))
     return None if found is None else (steps[found], tried(found))
+
+
+def coarsened[Result](
+    first: Result,
+    *,
+    tried: float,
+    candidates: tuple[float, ...],
+    attempt: Callable[[float], Result],
+    fits: Callable[[Result], bool],
+) -> Result:
+    result = first
+    for reuse in sorted(value for value in candidates if value > tried):
+        if fits(result):
+            return result
+        result = attempt(reuse)
+    return result

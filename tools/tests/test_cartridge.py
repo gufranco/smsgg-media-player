@@ -364,6 +364,17 @@ class TestStepDown:
         report = json.loads((tmp_path / "report.json").read_text())
         assert (code, report["banks"], report["fps"] < UNCAPPED_FPS) == (0, 1, True)
 
+    def test_a_measured_reuse_never_buys_room_with_a_looser_threshold(self, clip, tmp_path):
+        # Arrange
+        argv = _tight(clip, tmp_path, "--reuse", "auto")
+
+        # Act
+        code = cartridge.main(argv)
+
+        # Assert
+        report = json.loads((tmp_path / "report.json").read_text())
+        assert (code, report["banks"], report["reuse"] <= bake.DEFAULT_REUSE) == (0, 1, True)
+
     def test_a_film_no_rung_can_fit_is_refused_without_stepping_down(self, clip, tmp_path, capsys):
         # Arrange
         argv = [
